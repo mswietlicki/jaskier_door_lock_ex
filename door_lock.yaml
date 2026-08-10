@@ -1,0 +1,763 @@
+# =============================================================================
+#  jaskier_door_lock  —  12 V linear-actuator door lock
+# -----------------------------------------------------------------------------
+#  U1  ESP32-C3-Zero (Waveshare)      logic + Home Assistant API
+#  U2  DRV8871 breakout (Adafruit)    H-bridge, 6.5-45 V / 2 A cont.
+#  U3  INA219 (0.1 R shunt, 0x40)     high-side current + supply voltage
+#  U4  MH-MINI-360 (MP1584EN)         12 V -> 5.0 V for U1
+#  BAT LiFePO4 4S, 12.8 V nom (10.0-14.6 V)
+#
+#  End-of-travel and jam are both detected from motor current:
+#    * current collapses to ~0 A  -> actuator's internal limit switch opened
+#    * current rises to stall     -> mechanical hard stop
+#         ... after min_travel_ms -> normal end of stroke  (actuators w/o
+#                                   internal limit switches)
+#         ... before             -> JAM: stop, reverse out, raise alert
+#    * no result before max_travel_ms -> TIMEOUT: same treatment as a jam
+#
+#  Thresholds are exposed as Home Assistant number entities so the whole
+#  thing can be tuned on the bench without reflashing.  See "COMMISSIONING"
+#  in the accompanying wiring document before the first full-stroke move.
+# =============================================================================
+
+substitutions:
+  device_name: jaskier-door-lock
+  friendly: Door lock
+
+  # ---- pin map (see wiring document) --------------------------------------
+  pin_in1: GPIO6          # U2 IN1  -> drives towards UNLOCKED
+  pin_in2: GPIO7          # U2 IN2  -> drives towards LOCKED
+  pin_sda: GPIO8          # U3 SDA  (board default I2C, pulled up = boot-safe)
+  pin_scl: GPIO9          # U3 SCL  (also BOOT button - I2C idles high, so OK)
+  pin_rgb: GPIO10         # on-board WS2812 status LED
+  pin_sw_locked: GPIO0    # optional reed/limit switch, bolt fully LOCKED
+  pin_sw_unlocked: GPIO1  # optional reed/limit switch, bolt fully UNLOCKED
+  pin_button: GPIO5       # optional local push-button (toggle)
+
+  # ---- defaults for the tunable thresholds --------------------------------
+  # Measured stall current of this actuator was ~0.50 A.
+  default_stall_a: "0.40"        # A  - treat as mechanical hard stop
+  default_hard_a: "0.60"         # A  - immediate abort, no debounce
+  default_idle_a: "0.04"         # A  - internal limit switch has opened
+  default_blank_ms: "400"        # ms - ignore inrush after energising
+  default_min_travel_ms: "1500"  # ms - stall before this = jam, not end stop
+  default_max_travel_ms: "9000"  # ms - full stroke + margin
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly}
+  min_version: 2024.6.0
+  on_boot:
+    # Belt-and-braces: the 10 k pull-downs R1/R2 hold the bridge off during
+    # reset; this makes sure firmware agrees as soon as the outputs exist.
+    - priority: 600
+      then:
+        - script.execute: coast
+        - lambda: |-
+            id(fault_reason) = "boot";
+            id(mv_running) = false;
+        - script.execute: publish_lock_state
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+  hardware_uart: USB_SERIAL_JTAG   # logs over the USB-C socket
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  # Never leave the bridge energised if Home Assistant vanishes mid-move.
+  on_client_disconnected:
+    - if:
+        condition:
+          lambda: 'return id(mv_running);'
+        then:
+          - logger.log: "API lost while moving - continuing, move is self-limiting"
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: ${device_name}-setup
+    password: !secret ap_password
+
+captive_portal:
+
+i2c:
+  sda: ${pin_sda}
+  scl: ${pin_scl}
+  frequency: 400kHz
+  scan: true
+
+# =============================================================================
+#  state
+# =============================================================================
+globals:
+  # 0 unknown | 1 locked | 2 unlocked | 3 jammed | 4 locking | 5 unlocking
+  - id: lock_state
+    type: int
+    restore_value: true
+    initial_value: '0'
+
+  - id: mv_running        # a commanded move is in progress
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: mv_energized      # bridge is driving (move OR back-off)
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: mv_unlock         # direction of the move in progress
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: mv_start_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  # 0 running | 1 reached end of travel | 2 jam | 3 timeout
+  - id: mv_outcome
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: mv_idle_hits
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: mv_stall_hits
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: mv_peak_a
+    type: float
+    restore_value: false
+    initial_value: '0.0'
+  - id: mv_travel_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: mv_backoff_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+  - id: fault_reason
+    type: std::string
+    restore_value: false
+    initial_value: '"boot"'
+
+# =============================================================================
+#  H-bridge outputs  (plain on/off, no PWM)
+#  PWM would chop the current the INA219 sees and wreck stall detection.
+#  Both inputs low = coast + DRV8871 low-power sleep, which is what we want
+#  on a battery.
+# =============================================================================
+output:
+  - platform: gpio
+    id: drv_in1
+    pin: ${pin_in1}
+  - platform: gpio
+    id: drv_in2
+    pin: ${pin_in2}
+
+# =============================================================================
+#  current / voltage sensing
+#  motor_current is internal and fast (20 Hz) - it drives the state machine.
+#  Everything Home Assistant sees is derived from it at a sane rate.
+# =============================================================================
+sensor:
+  - platform: ina219
+    address: 0x40
+    shunt_resistance: 0.1 ohm
+    max_voltage: 16.0V
+    max_current: 1.6A
+    update_interval: 50ms
+    current:
+      id: motor_current
+      internal: true
+      filters:
+        - lambda: 'return fabsf(x);'
+      on_value:
+        - lambda: |-
+            if (!id(mv_running)) return;
+
+            const uint32_t el = millis() - id(mv_start_ms);
+            const float i = isnan(x) ? 0.0f : x;
+
+            // Inrush window: log the peak but do not judge yet.
+            if (el < (uint32_t) id(cfg_blank_ms).state) return;
+
+            if (i > id(mv_peak_a)) id(mv_peak_a) = i;
+
+            // Hard over-current: abort immediately, no debounce.
+            if (i > id(cfg_hard_a).state) {
+              id(mv_outcome) = 2;
+              id(mv_running) = false;
+              return;
+            }
+
+            id(mv_idle_hits)  = (i < id(cfg_idle_a).state)  ? id(mv_idle_hits) + 1  : 0;
+            id(mv_stall_hits) = (i > id(cfg_stall_a).state) ? id(mv_stall_hits) + 1 : 0;
+
+            // Current collapsed -> internal limit switch opened. Always a
+            // success, even early (the actuator was already at that end).
+            if (id(mv_idle_hits) >= 3) {
+              id(mv_outcome) = 1;
+              id(mv_running) = false;
+              return;
+            }
+
+            // Mechanical hard stop. Late = end of stroke, early = obstruction.
+            if (id(mv_stall_hits) >= 3) {
+              id(mv_outcome) = (el >= (uint32_t) id(cfg_min_travel_ms).state) ? 1 : 2;
+              id(mv_running) = false;
+              return;
+            }
+
+            if (el > (uint32_t) id(cfg_max_travel_ms).state) {
+              id(mv_outcome) = 3;
+              id(mv_running) = false;
+            }
+    bus_voltage:
+      name: "${friendly} supply voltage"
+      id: supply_voltage
+      accuracy_decimals: 2
+      filters:
+        - throttle: 60s
+        - delta: 0.05
+    shunt_voltage:
+      internal: true
+    power:
+      internal: true
+
+  - platform: template
+    name: "${friendly} motor current"
+    id: motor_current_reported
+    unit_of_measurement: A
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 3
+    update_interval: 1s
+    lambda: 'return id(motor_current).state;'
+
+  - platform: template
+    name: "${friendly} last move peak current"
+    id: peak_current_reported
+    unit_of_measurement: A
+    device_class: current
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+
+  - platform: template
+    name: "${friendly} last move duration"
+    id: travel_reported
+    unit_of_measurement: ms
+    device_class: duration
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: never
+
+# =============================================================================
+#  tunable thresholds - exposed to Home Assistant as config entities
+# =============================================================================
+number:
+  - platform: template
+    name: "${friendly} stall current"
+    id: cfg_stall_a
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_stall_a}
+    min_value: 0.05
+    max_value: 1.60
+    step: 0.01
+    unit_of_measurement: A
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "${friendly} hard current limit"
+    id: cfg_hard_a
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_hard_a}
+    min_value: 0.10
+    max_value: 1.60
+    step: 0.01
+    unit_of_measurement: A
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "${friendly} idle current"
+    id: cfg_idle_a
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_idle_a}
+    min_value: 0.005
+    max_value: 0.500
+    step: 0.005
+    unit_of_measurement: A
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "${friendly} inrush blanking"
+    id: cfg_blank_ms
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_blank_ms}
+    min_value: 100
+    max_value: 2000
+    step: 50
+    unit_of_measurement: ms
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "${friendly} min travel time"
+    id: cfg_min_travel_ms
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_min_travel_ms}
+    min_value: 200
+    max_value: 20000
+    step: 100
+    unit_of_measurement: ms
+    entity_category: config
+    mode: box
+
+  - platform: template
+    name: "${friendly} max travel time"
+    id: cfg_max_travel_ms
+    optimistic: true
+    restore_value: true
+    initial_value: ${default_max_travel_ms}
+    min_value: 500
+    max_value: 30000
+    step: 100
+    unit_of_measurement: ms
+    entity_category: config
+    mode: box
+
+switch:
+  # Turn this on only after SW1/SW2 are actually fitted (see Figure 2).
+  - platform: template
+    name: "${friendly} use position switches"
+    id: cfg_use_switches
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+
+# =============================================================================
+#  optional position feedback / local button
+#  Unfitted pins float high through the internal pull-up, so leaving these
+#  in place with nothing soldered is harmless.
+# =============================================================================
+binary_sensor:
+  - platform: gpio
+    id: sw_locked
+    name: "${friendly} bolt locked switch"
+    entity_category: diagnostic
+    pin:
+      number: ${pin_sw_locked}
+      mode:
+        input: true
+        pullup: true
+      inverted: true          # switch to GND = closed = true
+    filters:
+      - delayed_on_off: 30ms
+    on_press:
+      - if:
+          condition:
+            switch.is_on: cfg_use_switches
+          then:
+            - lambda: |-
+                if (id(mv_running) && !id(mv_unlock)) {
+                  id(mv_outcome) = 1;
+                  id(mv_running) = false;
+                }
+
+  - platform: gpio
+    id: sw_unlocked
+    name: "${friendly} bolt unlocked switch"
+    entity_category: diagnostic
+    pin:
+      number: ${pin_sw_unlocked}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on_off: 30ms
+    on_press:
+      - if:
+          condition:
+            switch.is_on: cfg_use_switches
+          then:
+            - lambda: |-
+                if (id(mv_running) && id(mv_unlock)) {
+                  id(mv_outcome) = 1;
+                  id(mv_running) = false;
+                }
+
+  - platform: gpio
+    id: local_button
+    internal: true
+    pin:
+      number: ${pin_button}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 40ms
+    on_press:
+      - script.execute:
+          id: cmd
+          unlock: !lambda 'return id(lock_state) != 2;'
+
+  - platform: template
+    name: "${friendly} fault"
+    id: lock_fault
+    device_class: problem
+
+text_sensor:
+  - platform: template
+    name: "${friendly} last result"
+    id: last_result
+    entity_category: diagnostic
+    update_interval: never
+
+# =============================================================================
+#  the lock entity
+# =============================================================================
+lock:
+  - platform: template
+    name: "${friendly}"
+    id: door_lock
+    optimistic: false
+    lock_action:
+      - script.execute:
+          id: cmd
+          unlock: false
+    unlock_action:
+      - script.execute:
+          id: cmd
+          unlock: true
+
+# =============================================================================
+#  status LED (on-board WS2812)
+#  white pulse = moving | green flash = done | red = fault
+# =============================================================================
+light:
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    internal: true
+    pin: ${pin_rgb}
+    num_leds: 1
+    chipset: WS2812
+    rgb_order: GRB
+    restore_mode: ALWAYS_OFF
+
+button:
+  - platform: template
+    name: "${friendly} stop"
+    id: btn_stop
+    entity_category: config
+    on_press:
+      - script.stop: move_actuator
+      - script.execute: coast
+      - lambda: |-
+          id(mv_running) = false;
+          id(fault_reason) = "stopped by user";
+      - text_sensor.template.publish:
+          id: last_result
+          state: "stopped by user"
+      - lambda: 'id(lock_state) = 0;'
+      - script.execute: publish_lock_state
+
+  - platform: template
+    name: "${friendly} clear fault"
+    entity_category: config
+    on_press:
+      - binary_sensor.template.publish:
+          id: lock_fault
+          state: false
+      - light.turn_off: status_led
+      - lambda: 'id(fault_reason) = "cleared";'
+      - text_sensor.template.publish:
+          id: last_result
+          state: "cleared"
+
+  # Bench helpers: 400 ms nudge in either direction, no jam logic, so you can
+  # read the free-running current before setting the thresholds.
+  - platform: template
+    name: "${friendly} jog unlock"
+    entity_category: config
+    on_press:
+      - script.execute: jog_unlock
+  - platform: template
+    name: "${friendly} jog lock"
+    entity_category: config
+    on_press:
+      - script.execute: jog_lock
+
+# =============================================================================
+#  scripts
+# =============================================================================
+script:
+  # --- low level -----------------------------------------------------------
+  - id: coast
+    mode: single
+    then:
+      - output.turn_off: drv_in1
+      - output.turn_off: drv_in2
+      - lambda: 'id(mv_energized) = false;'
+
+  - id: energize
+    mode: single
+    parameters:
+      unlock: bool
+    then:
+      - if:
+          condition:
+            lambda: 'return unlock;'
+          then:
+            - output.turn_off: drv_in2
+            - delay: 5ms
+            - output.turn_on: drv_in1
+          else:
+            - output.turn_off: drv_in1
+            - delay: 5ms
+            - output.turn_on: drv_in2
+      - lambda: 'id(mv_energized) = true;'
+
+  - id: publish_lock_state
+    mode: single
+    then:
+      - lambda: |-
+          switch (id(lock_state)) {
+            case 1: id(door_lock).publish_state(lock::LOCK_STATE_LOCKED);     break;
+            case 2: id(door_lock).publish_state(lock::LOCK_STATE_UNLOCKED);   break;
+            case 3: id(door_lock).publish_state(lock::LOCK_STATE_JAMMED);     break;
+            case 4: id(door_lock).publish_state(lock::LOCK_STATE_LOCKING);    break;
+            case 5: id(door_lock).publish_state(lock::LOCK_STATE_UNLOCKING);  break;
+            default: id(door_lock).publish_state(lock::LOCK_STATE_NONE);      break;
+          }
+
+  # --- command entry point -------------------------------------------------
+  # mode: restart so a new command always pre-empts one in flight, with a
+  # dead-time gap before the bridge is reversed.
+  - id: cmd
+    mode: restart
+    parameters:
+      unlock: bool
+    then:
+      - script.stop: move_actuator
+      - script.execute: coast
+      - lambda: 'id(mv_running) = false;'
+      - delay: 200ms
+      - script.execute:
+          id: move_actuator
+          unlock: !lambda 'return unlock;'
+
+  # --- the move ------------------------------------------------------------
+  - id: move_actuator
+    mode: single
+    parameters:
+      unlock: bool
+    then:
+      # Short-circuit if trusted switches already say we are there.
+      - if:
+          condition:
+            and:
+              - switch.is_on: cfg_use_switches
+              - lambda: |-
+                  return unlock ? id(sw_unlocked).state : id(sw_locked).state;
+          then:
+            - lambda: 'id(lock_state) = unlock ? 2 : 1;'
+            - script.execute: publish_lock_state
+            - text_sensor.template.publish:
+                id: last_result
+                state: "already there"
+          else:
+            - lambda: |-
+                id(mv_running)    = true;
+                id(mv_unlock)     = unlock;
+                id(mv_start_ms)   = millis();
+                id(mv_outcome)    = 0;
+                id(mv_idle_hits)  = 0;
+                id(mv_stall_hits) = 0;
+                id(mv_peak_a)     = 0.0f;
+                id(lock_state)    = unlock ? 5 : 4;
+            - script.execute: publish_lock_state
+            - light.turn_on:
+                id: status_led
+                red: 100%
+                green: 100%
+                blue: 100%
+                brightness: 25%
+            - script.execute:
+                id: energize
+                unlock: !lambda 'return unlock;'
+
+            # Wait for the current monitor to reach a verdict.
+            - while:
+                condition:
+                  lambda: 'return id(mv_running);'
+                then:
+                  - delay: 20ms
+
+            - script.execute: coast
+            - lambda: 'id(mv_travel_ms) = millis() - id(mv_start_ms);'
+            - sensor.template.publish:
+                id: peak_current_reported
+                state: !lambda 'return id(mv_peak_a);'
+            - sensor.template.publish:
+                id: travel_reported
+                state: !lambda 'return (float) id(mv_travel_ms);'
+
+            - if:
+                condition:
+                  lambda: 'return id(mv_outcome) == 1;'
+                then:
+                  - script.execute: finish_ok
+                else:
+                  - script.execute: finish_fault
+
+  - id: finish_ok
+    mode: single
+    then:
+      - lambda: |-
+          id(lock_state)   = id(mv_unlock) ? 2 : 1;
+          id(fault_reason) = "ok";
+      - script.execute: publish_lock_state
+      - binary_sensor.template.publish:
+          id: lock_fault
+          state: false
+      - text_sensor.template.publish:
+          id: last_result
+          state: !lambda 'return id(mv_unlock) ? "unlocked" : "locked";'
+      - light.turn_on:
+          id: status_led
+          red: 0%
+          green: 100%
+          blue: 0%
+          brightness: 25%
+      - delay: 1s
+      - light.turn_off: status_led
+
+  # Stop, reverse out of the obstruction for roughly as long as we drove in,
+  # then park in the unknown/jammed state and shout about it.
+  - id: finish_fault
+    mode: single
+    then:
+      - lambda: |-
+          id(fault_reason) = (id(mv_outcome) == 3)
+              ? "timeout - no end of travel detected"
+              : "obstruction - stalled mid-travel";
+          uint32_t b = id(mv_travel_ms) + 250;
+          if (b > 4000) b = 4000;
+          id(mv_backoff_ms) = b;
+      - light.turn_on:
+          id: status_led
+          red: 100%
+          green: 0%
+          blue: 0%
+          brightness: 35%
+      - delay: 250ms                      # dead time before reversing
+      - script.execute:
+          id: energize
+          unlock: !lambda 'return !id(mv_unlock);'
+      - delay: !lambda 'return id(mv_backoff_ms);'
+      - script.execute: coast
+
+      - lambda: 'id(lock_state) = 3;'     # JAMMED
+      - script.execute: publish_lock_state
+      - binary_sensor.template.publish:
+          id: lock_fault
+          state: true
+      - text_sensor.template.publish:
+          id: last_result
+          state: !lambda 'return id(fault_reason);'
+      - homeassistant.event:
+          event: esphome.door_lock_fault
+          data_template:
+            reason: "{{ reason }}"
+            direction: "{{ direction }}"
+            peak_current: "{{ peak }}"
+            travel_ms: "{{ travel }}"
+          variables:
+            reason: !lambda 'return id(fault_reason);'
+            direction: !lambda 'return id(mv_unlock) ? "unlocking" : "locking";'
+            peak: !lambda 'return id(mv_peak_a);'
+            travel: !lambda 'return (float) id(mv_travel_ms);'
+      - logger.log:
+          level: WARN
+          format: "MOVE FAILED (%s) after %u ms, peak %.3f A"
+          args: ['id(fault_reason).c_str()', 'id(mv_travel_ms)', 'id(mv_peak_a)']
+
+  # --- bench jog: fixed 400 ms, no protection logic ------------------------
+  - id: jog_unlock
+    mode: single
+    then:
+      - script.stop: move_actuator
+      - script.execute: coast
+      - delay: 200ms
+      - script.execute: {id: energize, unlock: true}
+      - delay: 400ms
+      - script.execute: coast
+      - lambda: 'id(lock_state) = 0;'
+      - script.execute: publish_lock_state
+
+  - id: jog_lock
+    mode: single
+    then:
+      - script.stop: move_actuator
+      - script.execute: coast
+      - delay: 200ms
+      - script.execute: {id: energize, unlock: false}
+      - delay: 400ms
+      - script.execute: coast
+      - lambda: 'id(lock_state) = 0;'
+      - script.execute: publish_lock_state
+
+# =============================================================================
+#  independent watchdog - last line of defence if a script ever wedges
+#  with the bridge still energised.
+# =============================================================================
+interval:
+  - interval: 500ms
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(mv_energized) &&
+                     (millis() - id(mv_start_ms)) >
+                     (uint32_t) (id(cfg_max_travel_ms).state + 6000);
+          then:
+            - script.stop: move_actuator
+            - script.stop: finish_fault
+            - script.execute: coast
+            - lambda: |-
+                id(mv_running)   = false;
+                id(lock_state)   = 0;
+                id(fault_reason) = "watchdog forced bridge off";
+            - script.execute: publish_lock_state
+            - binary_sensor.template.publish:
+                id: lock_fault
+                state: true
+            - text_sensor.template.publish:
+                id: last_result
+                state: "watchdog forced bridge off"
+            - logger.log:
+                level: ERROR
+                format: "WATCHDOG: bridge was still energised, forced off"

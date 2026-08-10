@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" role="img" aria-label="Optional switch wiring: GPIO0, GPIO1 and GPIO5 each go to one side of a switch; the other side of every switch returns to the GND rail. Internal pull-ups mean a closed switch reads as active.">
+  <title>Figure 2 - Optional position switches</title>
+  <style>
+    svg {
+      --ink:#121A1F; --ink-2:#3B474E; --muted:#5B686F;
+      --surface:#FFFFFF; --surface-2:#F3F6F7; --line:#CFD9DE; --line-soft:#E1E8EB;
+      --w12:#C4322A; --w5:#D07B22; --w33:#A03D86; --wgnd:#3E4A51;
+      --wi2c:#1E6FAF; --wctrl:#2A7F4F; --wmot:#6A4CA0;
+      --ok:#2A7F4F; --warn:#B07A10; --bad:#B8332A;
+      --font-display:"Bahnschrift SemiCondensed","Bahnschrift","DIN Alternate","Segoe UI Semibold","Segoe UI",sans-serif;
+      --font-body:"Segoe UI",Corbel,system-ui,sans-serif;
+      --font-mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace;
+      background:#FFFFFF; color:var(--ink);
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --ink:#E6ECEF; --ink-2:#BCC7CD; --muted:#8B989F;
+        --surface:#151C21; --surface-2:#1B242A; --line:#28343B; --line-soft:#202B31;
+        --w12:#E8635A; --w5:#E9A54A; --w33:#D174B7; --wgnd:#93A2AA;
+        --wi2c:#58A8E4; --wctrl:#57BE85; --wmot:#A78BDC;
+        --ok:#57BE85; --warn:#E0B44A; --bad:#F0736A;
+        background:#151C21;
+      }
+    }
+    .box   { fill:var(--surface-2); stroke:var(--ink); stroke-width:1.6; }
+    .comp  { fill:var(--surface); stroke:var(--ink); stroke-width:1.5; }
+    .pad   { fill:var(--ink); stroke:none; }
+    .padnc { fill:var(--surface); stroke:var(--muted); stroke-width:1.3; }
+    .t     { font-family:var(--font-mono); font-size:12.5px; fill:var(--ink); }
+    .tt    { font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.04em; fill:var(--ink); }
+    .ts    { font-family:var(--font-body); font-size:11.5px; fill:var(--muted); }
+    .tn    { font-family:var(--font-mono); font-size:11px; fill:var(--muted); }
+    .w     { fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+    .rail  { stroke-width:3.6; fill:none; stroke-linecap:round; }
+    .w12   { stroke:var(--w12); }
+    .w5    { stroke:var(--w5); }
+    .w33   { stroke:var(--w33); }
+    .wgnd  { stroke:var(--wgnd); }
+    .wi2c  { stroke:var(--wi2c); }
+    .wctrl { stroke:var(--wctrl); }
+    .wmot  { stroke:var(--wmot); stroke-width:2.8; }
+    .axis  { stroke:var(--muted); stroke-width:1.2; fill:none; }
+    .thr   { stroke:var(--muted); stroke-width:1; stroke-dasharray:4 4; fill:none; }
+    .trace { fill:none; stroke-width:2.4; stroke-linejoin:round; }
+  </style>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+    </marker>
+  </defs>
+        <rect class="box" x="60" y="70" width="190" height="270" rx="3"/>
+        <text class="tt" x="155" y="180" text-anchor="middle">U1</text>
+        <text class="ts" x="155" y="202" text-anchor="middle">left edge</text>
+        <text class="ts" x="155" y="220" text-anchor="middle">(detail)</text>
+
+        <rect class="pad" x="244" y="114" width="12" height="12"/>
+        <text class="t" x="234" y="125" text-anchor="end">IO0</text>
+        <rect class="pad" x="244" y="184" width="12" height="12"/>
+        <text class="t" x="234" y="195" text-anchor="end">IO1</text>
+        <rect class="pad" x="244" y="254" width="12" height="12"/>
+        <text class="t" x="234" y="265" text-anchor="end">IO5</text>
+        <rect class="pad" x="244" y="314" width="12" height="12"/>
+        <text class="t" x="234" y="325" text-anchor="end">GND</text>
+
+        <!-- SW1 -->
+        <polyline class="w wctrl" points="250,120 420,120"/>
+        <circle class="pad" cx="424" cy="120" r="4"/>
+        <line x1="424" y1="120" x2="486" y2="100" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="120" r="4"/>
+        <polyline class="w wgnd" points="500,120 700,120"/>
+        <text class="t"  x="424" y="82">SW1</text>
+        <text class="ts" x="470" y="146">reed or micro switch — bolt fully LOCKED</text>
+
+        <!-- SW2 -->
+        <polyline class="w wctrl" points="250,190 420,190"/>
+        <circle class="pad" cx="424" cy="190" r="4"/>
+        <line x1="424" y1="190" x2="486" y2="170" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="190" r="4"/>
+        <polyline class="w wgnd" points="500,190 700,190"/>
+        <text class="t"  x="424" y="152">SW2</text>
+        <text class="ts" x="470" y="216">reed or micro switch — bolt fully UNLOCKED</text>
+
+        <!-- SW3 -->
+        <polyline class="w wctrl" points="250,260 420,260"/>
+        <circle class="pad" cx="424" cy="260" r="4"/>
+        <line x1="424" y1="260" x2="486" y2="240" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="260" r="4"/>
+        <polyline class="w wgnd" points="500,260 700,260"/>
+        <text class="t"  x="424" y="222">SW3</text>
+        <text class="ts" x="470" y="286">momentary push-button — toggles the lock</text>
+
+        <polyline class="w wgnd" points="250,320 700,320"/>
+        <polyline class="w wgnd" points="700,120 700,320"/>
+        <circle class="pad" cx="700" cy="190" r="4.5"/>
+        <circle class="pad" cx="700" cy="260" r="4.5"/>
+        <circle class="pad" cx="700" cy="320" r="4.5"/>
+        <polyline class="w wgnd" points="700,320 860,320"/>
+        <text class="tn" x="716" y="344">to GND rail (Figure 1)</text>
+
+        <text class="ts" x="60" y="382">Internal pull-ups are enabled in firmware — a closed switch pulls the pin to GND and reads as active. Leaving these pads empty is harmless: the pins float high and read inactive.</text>
+      </svg>

@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12 V Actuator Door Lock — Wiring &amp; Commissioning</title>
+
+<style>
+  :root {
+    --bg:        #E9EDEF;
+    --surface:   #FFFFFF;
+    --surface-2: #F3F6F7;
+    --ink:       #121A1F;
+    --ink-2:     #3B474E;
+    --muted:     #5B686F;
+    --line:      #CFD9DE;
+    --line-soft: #E1E8EB;
+    --accent:    #9E5325;
+    --accent-2:  #C8703A;
+
+    --w12:   #C4322A;
+    --w5:    #D07B22;
+    --w33:   #A03D86;
+    --wgnd:  #3E4A51;
+    --wi2c:  #1E6FAF;
+    --wctrl: #2A7F4F;
+    --wmot:  #6A4CA0;
+
+    --ok:   #2A7F4F;
+    --warn: #B07A10;
+    --bad:  #B8332A;
+
+    --font-display: "Bahnschrift SemiCondensed", "Bahnschrift", "DIN Alternate", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    --font-body: "Segoe UI", Corbel, system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #0D1216;
+      --surface:   #151C21;
+      --surface-2: #1B242A;
+      --ink:       #E6ECEF;
+      --ink-2:     #BCC7CD;
+      --muted:     #8B989F;
+      --line:      #28343B;
+      --line-soft: #202B31;
+      --accent:    #DE8B55;
+      --accent-2:  #E9A578;
+
+      --w12:   #E8635A;
+      --w5:    #E9A54A;
+      --w33:   #D174B7;
+      --wgnd:  #93A2AA;
+      --wi2c:  #58A8E4;
+      --wctrl: #57BE85;
+      --wmot:  #A78BDC;
+
+      --ok:   #57BE85;
+      --warn: #E0B44A;
+      --bad:  #F0736A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0D1216;
+    --surface:   #151C21;
+    --surface-2: #1B242A;
+    --ink:       #E6ECEF;
+    --ink-2:     #BCC7CD;
+    --muted:     #8B989F;
+    --line:      #28343B;
+    --line-soft: #202B31;
+    --accent:    #DE8B55;
+    --accent-2:  #E9A578;
+    --w12:   #E8635A;
+    --w5:    #E9A54A;
+    --w33:   #D174B7;
+    --wgnd:  #93A2AA;
+    --wi2c:  #58A8E4;
+    --wctrl: #57BE85;
+    --wmot:  #A78BDC;
+    --ok:   #57BE85;
+    --warn: #E0B44A;
+    --bad:  #F0736A;
+  }
+  :root[data-theme="light"] {
+    --bg:        #E9EDEF;
+    --surface:   #FFFFFF;
+    --surface-2: #F3F6F7;
+    --ink:       #121A1F;
+    --ink-2:     #3B474E;
+    --muted:     #5B686F;
+    --line:      #CFD9DE;
+    --line-soft: #E1E8EB;
+    --accent:    #9E5325;
+    --accent-2:  #C8703A;
+    --w12:   #C4322A;
+    --w5:    #D07B22;
+    --w33:   #A03D86;
+    --wgnd:  #3E4A51;
+    --wi2c:  #1E6FAF;
+    --wctrl: #2A7F4F;
+    --wmot:  #6A4CA0;
+    --ok:   #2A7F4F;
+    --warn: #B07A10;
+    --bad:  #B8332A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ---------- masthead ---------- */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 48px 0 20px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(32px, 5.2vw, 52px);
+    line-height: 1.03;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+  .standfirst {
+    font-size: 18px;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .specstrip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 28px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .specstrip div {
+    flex: 1 1 150px;
+    padding: 12px 16px;
+    border-right: 1px solid var(--line-soft);
+  }
+  .specstrip div:last-child { border-right: 0; }
+  .specstrip dt {
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 3px;
+  }
+  .specstrip dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- sections ---------- */
+  section { margin: 0 0 56px; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: 0.005em;
+    margin: 0 0 4px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  h2 .refdes {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: 2px;
+    padding: 2px 7px;
+    white-space: nowrap;
+  }
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    margin: 32px 0 10px;
+  }
+  p { max-width: 68ch; }
+  ul, ol { max-width: 68ch; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 2px;
+    padding: 1px 5px;
+  }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--muted);
+    border-radius: 3px;
+    padding: 16px 20px;
+    margin: 24px 0;
+    max-width: 74ch;
+  }
+  .callout.danger { border-left-color: var(--bad); }
+  .callout.warn   { border-left-color: var(--warn); }
+  .callout .label {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .callout.danger .label { color: var(--bad); }
+  .callout.warn   .label { color: var(--warn); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout p:first-of-type { margin-top: 0; }
+
+  /* ---------- figures ---------- */
+  figure {
+    margin: 28px 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 20px;
+  }
+  .scroller { overflow-x: auto; }
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 720px;
+    height: auto;
+    color: var(--ink);
+  }
+  figcaption {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    max-width: 90ch;
+  }
+  figcaption b { color: var(--ink-2); font-weight: 600; }
+
+  /* svg primitives */
+  .box   { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.6; }
+  .boxd  { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+  .pad   { fill: var(--ink); stroke: none; }
+  .padnc { fill: var(--surface); stroke: var(--muted); stroke-width: 1.3; }
+  .t     { font-family: var(--font-mono); font-size: 12.5px; fill: var(--ink); }
+  .tt    { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0.04em; fill: var(--ink); }
+  .ts    { font-family: var(--font-body); font-size: 11.5px; fill: var(--muted); }
+  .tn    { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+  .w     { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .w12   { stroke: var(--w12); }
+  .w5    { stroke: var(--w5); }
+  .w33   { stroke: var(--w33); }
+  .wgnd  { stroke: var(--wgnd); }
+  .wi2c  { stroke: var(--wi2c); }
+  .wctrl { stroke: var(--wctrl); }
+  .wmot  { stroke: var(--wmot); stroke-width: 2.8; }
+  .rail  { stroke-width: 3.6; fill: none; stroke-linecap: round; }
+  .comp  { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+  .axis  { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+  .thr   { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+  .trace { fill: none; stroke-width: 2.4; stroke-linejoin: round; }
+
+  /* ---------- legend ---------- */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px 20px;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+  .legend span { display: flex; align-items: center; gap: 9px; color: var(--ink-2); }
+  .legend i { flex: 0 0 26px; height: 3px; border-radius: 2px; }
+  .legend .glyph {
+    flex: 0 0 26px; height: auto; font-family: var(--font-mono);
+    font-size: 13px; color: var(--ink); font-style: normal; text-align: center;
+  }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 20px 0; border: 1px solid var(--line); border-radius: 3px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--surface); }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.mono, th.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.groupsep td { border-top: 2px solid var(--line); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: baseline; }
+  .nc { color: var(--muted); }
+
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 18px 0;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Bench build · perfboard prototype</p>
+  <h1>12 V Linear-Actuator Door Lock</h1>
+  <p class="standfirst">ESP32-C3-Zero running ESPHome, DRV8871 H-bridge, INA219 high-side current monitor, MH-MINI-360 buck, off a 4S LiFePO<sub>4</sub> pack. End of travel and obstructions are both read out of the motor current — no extra sensors required.</p>
+
+  <dl class="specstrip">
+    <div><dt>Pack</dt><dd>4S LiFePO₄ · 10.0–14.6 V</dd></div>
+    <div><dt>Measured stall</dt><dd>≈ 0.50 A</dd></div>
+    <div><dt>Stall threshold</dt><dd>0.40 A / 0.60 A hard</dd></div>
+    <div><dt>Shunt</dt><dd>0.1 Ω · 0.8 mA LSB</dd></div>
+    <div><dt>I²C</dt><dd>GPIO8 / GPIO9 · 0x40</dd></div>
+    <div><dt>Bridge</dt><dd>GPIO6 / GPIO7 · no PWM</dd></div>
+  </dl>
+</header>
+
+<section>
+  <h2>Read this before you power anything <span class="refdes">U4</span></h2>
+
+  <div class="callout danger">
+    <span class="label">Set the buck output first</span>
+    <p>The MH-MINI-360 ships with its trimpot in an arbitrary position and will happily pass something close to 12 V straight through. The ESP32-C3-Zero's <code>5V</code> pin accepts <strong>3.7–6 V</strong> — anything above that destroys the board's regulator and probably the chip.</p>
+    <p>Wire U4 to the pack <em>with nothing on its output</em>, measure OUT+ to OUT− with a meter, turn the trimpot until it reads <strong>5.00 V</strong>, then power down and connect U1.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="label">Two things a door lock has to get right</span>
+    <p>Keep a mechanical override — a key cylinder or a thumb turn — that works with the electronics dead. And make sure the actuator cannot trap anyone inside; the bolt must be releasable from the protected side without power.</p>
+  </div>
+
+  <p>One design consequence worth flagging up front: the firmware drives the bridge <strong>fully on, never PWM</strong>. PWM would chop the current the INA219 sees and make stall detection unreliable, so the actuator only ever runs at full speed. If you later want a soft start, you need an RC filter on the sense path and higher thresholds.</p>
+</section>
+
+<section>
+  <h2>Wiring diagram <span class="refdes">Figure 1</span></h2>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1500 1040" role="img" aria-label="Complete wiring diagram: a 4S LiFePO4 pack feeds a fused plus 12 volt rail; the rail supplies an MH-MINI-360 buck converter that makes 5 volts for an ESP32-C3-Zero, and an INA219 high-side shunt that feeds the DRV8871 H-bridge driving the linear actuator. The ESP32 talks I2C to the INA219 on GPIO8 and GPIO9 and drives the bridge inputs from GPIO6 and GPIO7.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- ============ RAILS ============ -->
+        <line class="rail w12" x1="90" y1="60" x2="1400" y2="60"/>
+        <text class="tt" x="90" y="42" fill="var(--w12)">+12 V RAIL (fused)</text>
+        <text class="tn" x="1410" y="64">+12 V</text>
+
+        <line class="rail wgnd" x1="90" y1="976" x2="1400" y2="976"/>
+        <text class="tt" x="90" y="1010" fill="var(--wgnd)">GND RAIL</text>
+        <text class="ts" x="290" y="1010">— single star point at BAT1 −, all returns land here</text>
+        <text class="tn" x="1410" y="980">GND</text>
+
+        <!-- ============ BAT1 ============ -->
+        <rect class="box" x="150" y="760" width="230" height="140" rx="2"/>
+        <text class="tt" x="166" y="792">BAT1</text>
+        <text class="t"  x="166" y="816">LiFePO₄ 4S</text>
+        <text class="ts" x="166" y="838">12.8 V nominal</text>
+        <text class="ts" x="166" y="856">10.0 – 14.6 V</text>
+        <text class="ts" x="166" y="874">BMS-protected pack</text>
+        <rect class="pad" x="144" y="794" width="12" height="12"/>
+        <text class="t" x="162" y="758" text-anchor="middle">+</text>
+        <rect class="pad" x="194" y="894" width="12" height="12"/>
+        <text class="t" x="212" y="918">−</text>
+
+        <!-- BAT+ up through F1 and D1 to the rail -->
+        <polyline class="w w12" points="150,800 90,800 90,740"/>
+        <rect class="comp" x="74" y="700" width="32" height="40" rx="2"/>
+        <line x1="82" y1="734" x2="98" y2="706" stroke="var(--ink)" stroke-width="1.4"/>
+        <text class="t"  x="116" y="716">F1</text>
+        <text class="ts" x="116" y="734">2 A slow-blow</text>
+        <polyline class="w w12" points="90,700 90,662"/>
+        <polygon class="comp" points="76,662 104,662 90,630"/>
+        <line x1="76" y1="628" x2="104" y2="628" stroke="var(--ink)" stroke-width="2"/>
+        <text class="t"  x="116" y="648">D1</text>
+        <text class="ts" x="116" y="666">SS54 · reverse-polarity (optional)</text>
+        <polyline class="w w12" points="90,626 90,60"/>
+        <circle class="pad" cx="90" cy="60" r="4.5"/>
+
+        <!-- BAT- to GND rail -->
+        <polyline class="w wgnd" points="200,900 200,976"/>
+        <circle class="pad" cx="200" cy="976" r="4.5"/>
+        <text class="tn" x="210" y="946">star point</text>
+
+        <!-- ============ U4 BUCK ============ -->
+        <rect class="box" x="150" y="300" width="240" height="150" rx="2"/>
+        <text class="tt" x="166" y="330">U4  MH-MINI-360</text>
+        <text class="ts" x="166" y="352">MP1584EN step-down</text>
+        <text class="ts" x="166" y="370">IN 4.75 – 23 V · 1.8 A</text>
+        <text class="ts" x="166" y="394" fill="var(--w5)">OUT adjustable →</text>
+        <text class="t"  x="166" y="414" fill="var(--w5)">SET TO 5.00 V FIRST</text>
+        <circle cx="360" cy="428" r="9" fill="none" stroke="var(--muted)" stroke-width="1.3"/>
+        <line x1="360" y1="428" x2="366" y2="422" stroke="var(--muted)" stroke-width="1.3"/>
+        <text class="tn" x="300" y="446">trimpot</text>
+
+        <rect class="pad" x="144" y="334" width="12" height="12"/>
+        <text class="t" x="162" y="330" text-anchor="start">IN+</text>
+        <rect class="pad" x="144" y="394" width="12" height="12"/>
+        <rect class="pad" x="384" y="334" width="12" height="12"/>
+        <rect class="pad" x="384" y="394" width="12" height="12"/>
+        <text class="tn" x="380" y="326" text-anchor="end">OUT+</text>
+        <text class="tn" x="380" y="388" text-anchor="end">OUT−</text>
+        <text class="tn" x="160" y="392" text-anchor="start">IN−</text>
+
+        <polyline class="w w12" points="150,340 120,340 120,60"/>
+        <circle class="pad" cx="120" cy="60" r="4.5"/>
+        <polyline class="w wgnd" points="150,400 130,400 130,470 410,470"/>
+        <polyline class="w wgnd" points="390,400 410,400 410,976"/>
+        <circle class="pad" cx="410" cy="470" r="4.5"/>
+        <circle class="pad" cx="410" cy="976" r="4.5"/>
+
+        <!-- 5V to U1 -->
+        <polyline class="w w5" points="390,340 560,340"/>
+        <text class="tn" x="470" y="332" text-anchor="middle" fill="var(--w5)">5.00 V</text>
+
+        <!-- ============ U1 ESP32-C3-Zero ============ -->
+        <rect class="box" x="560" y="280" width="230" height="560" rx="3"/>
+        <rect x="648" y="268" width="54" height="14" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"/>
+        <text class="tn" x="675" y="262" text-anchor="middle">USB-C</text>
+        <text class="tt" x="675" y="482" text-anchor="middle">U1</text>
+        <text class="t"  x="675" y="506" text-anchor="middle">ESP32-C3-Zero</text>
+        <text class="ts" x="675" y="526" text-anchor="middle">ESP32-C3FH4</text>
+        <text class="ts" x="675" y="544" text-anchor="middle">4 MB flash</text>
+        <text class="ts" x="675" y="568" text-anchor="middle">GPIO11–17</text>
+        <text class="ts" x="675" y="584" text-anchor="middle">not broken out</text>
+
+        <!-- left pads -->
+        <rect class="pad" x="554" y="334" width="12" height="12"/>
+        <text class="t" x="574" y="345">5V</text>
+        <rect class="pad" x="554" y="394" width="12" height="12"/>
+        <text class="t" x="574" y="405">GND</text>
+        <rect class="pad" x="554" y="454" width="12" height="12"/>
+        <text class="t" x="574" y="465">3V3</text>
+        <rect class="padnc" x="554" y="514" width="12" height="12"/>
+        <text class="t" x="574" y="525">IO0</text>
+        <rect class="padnc" x="554" y="574" width="12" height="12"/>
+        <text class="t" x="574" y="585">IO1</text>
+        <rect class="padnc" x="554" y="634" width="12" height="12"/>
+        <text class="t" x="574" y="645">IO2</text>
+        <rect class="padnc" x="554" y="694" width="12" height="12"/>
+        <text class="t" x="574" y="705">IO3</text>
+        <rect class="padnc" x="554" y="754" width="12" height="12"/>
+        <text class="t" x="574" y="765">IO4</text>
+        <rect class="padnc" x="554" y="814" width="12" height="12"/>
+        <text class="t" x="574" y="825">IO5</text>
+
+        <!-- right pads -->
+        <rect class="padnc" x="784" y="334" width="12" height="12"/>
+        <text class="t" x="776" y="345" text-anchor="end">IO21</text>
+        <rect class="padnc" x="784" y="394" width="12" height="12"/>
+        <text class="t" x="776" y="405" text-anchor="end">IO20</text>
+        <rect class="padnc" x="784" y="454" width="12" height="12"/>
+        <text class="t" x="776" y="465" text-anchor="end">IO19 ⊘</text>
+        <rect class="padnc" x="784" y="514" width="12" height="12"/>
+        <text class="t" x="776" y="525" text-anchor="end">IO18 ⊘</text>
+        <rect class="padnc" x="784" y="574" width="12" height="12"/>
+        <text class="t" x="776" y="585" text-anchor="end">IO10 ◆</text>
+        <rect class="pad" x="784" y="634" width="12" height="12"/>
+        <text class="t" x="776" y="645" text-anchor="end">IO9</text>
+        <rect class="pad" x="784" y="694" width="12" height="12"/>
+        <text class="t" x="776" y="705" text-anchor="end">IO8</text>
+        <rect class="pad" x="784" y="754" width="12" height="12"/>
+        <text class="t" x="776" y="765" text-anchor="end">IO7</text>
+        <rect class="pad" x="784" y="814" width="12" height="12"/>
+        <text class="t" x="776" y="825" text-anchor="end">IO6</text>
+
+        <!-- right-side notes -->
+        <text class="tn" x="930" y="345">free · UART0 TX</text>
+        <text class="tn" x="930" y="405">free · UART0 RX</text>
+        <text class="tn" x="930" y="465">USB D+ · reserved</text>
+        <text class="tn" x="930" y="525">USB D− · reserved</text>
+
+        <!-- U1 GND down -->
+        <polyline class="w wgnd" points="560,400 520,400 520,976"/>
+        <circle class="pad" cx="520" cy="400" r="4.5"/>
+        <circle class="pad" cx="520" cy="976" r="4.5"/>
+
+        <!-- U1 3V3 up and over to U3 VCC -->
+        <polyline class="w w33" points="560,460 540,460 540,150 900,150 900,180 940,180"/>
+        <text class="tn" x="700" y="142" fill="var(--w33)">+3.3 V</text>
+
+        <!-- U3 GND back to the star point -->
+        <polyline class="w wgnd" points="940,220 800,220 800,100 520,100"/>
+        <circle class="pad" cx="520" cy="100" r="4.5"/>
+        <text class="tn" x="640" y="94">U3 GND — own wire to star point</text>
+
+        <!-- I2C -->
+        <polyline class="w wi2c" points="790,640 820,640 820,260 940,260"/>
+        <text class="tn" x="866" y="254" fill="var(--wi2c)">SCL</text>
+        <polyline class="w wi2c" points="790,700 850,700 850,300 940,300"/>
+        <text class="tn" x="880" y="294" fill="var(--wi2c)">SDA</text>
+
+        <!-- bridge control -->
+        <polyline class="w wctrl" points="790,760 880,760 880,650 940,650"/>
+        <text class="tn" x="896" y="644" fill="var(--wctrl)">IN2 · lock</text>
+        <polyline class="w wctrl" points="790,820 910,820 910,710 940,710"/>
+        <text class="tn" x="922" y="704" fill="var(--wctrl)">IN1 · unlock</text>
+
+        <!-- R1 / R2 pulldowns -->
+        <circle class="pad" cx="856" cy="760" r="4"/>
+        <polyline class="w wgnd" points="856,760 856,864"/>
+        <rect class="comp" x="846" y="864" width="20" height="34" rx="1"/>
+        <polyline class="w wgnd" points="856,898 856,918"/>
+        <line x1="840" y1="918" x2="872" y2="918" stroke="var(--wgnd)" stroke-width="2.2"/>
+        <line x1="846" y1="925" x2="866" y2="925" stroke="var(--wgnd)" stroke-width="2"/>
+        <line x1="852" y1="932" x2="860" y2="932" stroke="var(--wgnd)" stroke-width="2"/>
+        <text class="tn" x="878" y="886">R2 10 k</text>
+
+        <circle class="pad" cx="940" cy="820" r="4"/>
+        <polyline class="w wgnd" points="910,820 940,820 940,864"/>
+        <rect class="comp" x="930" y="864" width="20" height="34" rx="1"/>
+        <polyline class="w wgnd" points="940,898 940,918"/>
+        <line x1="924" y1="918" x2="956" y2="918" stroke="var(--wgnd)" stroke-width="2.2"/>
+        <line x1="930" y1="925" x2="950" y2="925" stroke="var(--wgnd)" stroke-width="2"/>
+        <line x1="936" y1="932" x2="944" y2="932" stroke="var(--wgnd)" stroke-width="2"/>
+        <text class="tn" x="962" y="886">R1 10 k</text>
+        <text class="ts" x="820" y="956">pull-downs keep the bridge off during reset</text>
+
+        <!-- ============ U3 INA219 ============ -->
+        <rect class="box" x="940" y="140" width="220" height="190" rx="2"/>
+        <text class="tt" x="1050" y="170" text-anchor="middle">U3  INA219</text>
+        <text class="ts" x="1050" y="196" text-anchor="middle">0.1 Ω shunt · addr 0x40</text>
+        <text class="ts" x="1050" y="214" text-anchor="middle">VS 3.0 – 5.5 V</text>
+        <text class="ts" x="1050" y="232" text-anchor="middle">bus ≤ 26 V · 0.8 mA LSB</text>
+        <text class="ts" x="1050" y="256" text-anchor="middle">all six pins sit on</text>
+        <text class="ts" x="1050" y="272" text-anchor="middle">one 6-way header</text>
+        <text class="ts" x="1050" y="296" text-anchor="middle">A0 / A1 open = 0x40</text>
+
+        <rect class="pad" x="934" y="174" width="12" height="12"/>
+        <text class="tn" x="952" y="166">VCC</text>
+        <rect class="pad" x="934" y="214" width="12" height="12"/>
+        <text class="tn" x="952" y="240">GND</text>
+        <rect class="pad" x="934" y="254" width="12" height="12"/>
+        <text class="tn" x="936" y="284">SCL</text>
+        <rect class="pad" x="934" y="294" width="12" height="12"/>
+        <text class="tn" x="936" y="324">SDA</text>
+        <rect class="pad" x="1154" y="184" width="12" height="12"/>
+        <text class="tn" x="1148" y="178" text-anchor="end">VIN+</text>
+        <rect class="pad" x="1154" y="274" width="12" height="12"/>
+        <text class="tn" x="1148" y="268" text-anchor="end">VIN−</text>
+
+        <polyline class="w w12" points="1160,190 1240,190 1240,60"/>
+        <circle class="pad" cx="1240" cy="60" r="4.5"/>
+        <polyline class="w w12" points="1160,280 1220,280 1220,430 1060,430 1060,540"/>
+        <text class="tn" x="1250" y="130" fill="var(--w12)">shunt in</text>
+        <text class="tn" x="1232" y="356" fill="var(--w12)">motor feed</text>
+
+        <!-- C1 / C2 across the bridge supply -->
+        <circle class="pad" cx="1090" cy="430" r="4"/>
+        <polyline class="w wgnd" points="1090,430 1090,456"/>
+        <line x1="1072" y1="458" x2="1108" y2="458" stroke="var(--ink)" stroke-width="2.2"/>
+        <line x1="1072" y1="468" x2="1108" y2="468" stroke="var(--ink)" stroke-width="2.2"/>
+        <polyline class="w wgnd" points="1090,470 1090,492"/>
+        <line x1="1074" y1="492" x2="1106" y2="492" stroke="var(--wgnd)" stroke-width="2.2"/>
+        <line x1="1080" y1="499" x2="1100" y2="499" stroke="var(--wgnd)" stroke-width="2"/>
+        <line x1="1086" y1="506" x2="1094" y2="506" stroke="var(--wgnd)" stroke-width="2"/>
+        <text class="tn" x="1000" y="466" text-anchor="end">C1 100 µF / 25 V</text>
+
+        <circle class="pad" cx="1150" cy="430" r="4"/>
+        <polyline class="w wgnd" points="1150,430 1150,456"/>
+        <line x1="1132" y1="458" x2="1168" y2="458" stroke="var(--ink)" stroke-width="2.2"/>
+        <line x1="1132" y1="468" x2="1168" y2="468" stroke="var(--ink)" stroke-width="2.2"/>
+        <polyline class="w wgnd" points="1150,470 1150,492"/>
+        <line x1="1134" y1="492" x2="1166" y2="492" stroke="var(--wgnd)" stroke-width="2.2"/>
+        <line x1="1140" y1="499" x2="1160" y2="499" stroke="var(--wgnd)" stroke-width="2"/>
+        <line x1="1146" y1="506" x2="1154" y2="506" stroke="var(--wgnd)" stroke-width="2"/>
+        <text class="tn" x="1180" y="466">C2 100 nF</text>
+
+        <!-- ============ U2 DRV8871 ============ -->
+        <rect class="box" x="940" y="540" width="240" height="300" rx="2"/>
+        <text class="tt" x="1060" y="580" text-anchor="middle">U2  DRV8871</text>
+        <text class="ts" x="1060" y="604" text-anchor="middle">6.5 – 45 V</text>
+        <text class="ts" x="1060" y="622" text-anchor="middle">2 A cont. / 3.6 A peak</text>
+        <text class="ts" x="1060" y="646" text-anchor="middle">I_LIM set by the</text>
+        <text class="ts" x="1060" y="662" text-anchor="middle">on-board resistor ≈ 2 A</text>
+        <text class="ts" x="1060" y="690" text-anchor="middle">IN1 IN2 = 0 0 → coast</text>
+        <text class="ts" x="1060" y="706" text-anchor="middle">1 0 → unlock</text>
+        <text class="ts" x="1060" y="722" text-anchor="middle">0 1 → lock</text>
+        <text class="ts" x="1060" y="738" text-anchor="middle">1 1 → brake</text>
+        <text class="ts" x="1060" y="766" text-anchor="middle">3.3 V logic OK</text>
+
+        <rect class="pad" x="1054" y="534" width="12" height="12"/>
+        <text class="tn" x="1074" y="530">Power +</text>
+        <rect class="pad" x="1054" y="834" width="12" height="12"/>
+        <text class="tn" x="1074" y="856">Power −</text>
+        <rect class="padnc" x="934" y="584" width="12" height="12"/>
+        <text class="tn" x="954" y="578">VM ○</text>
+        <rect class="pad" x="934" y="644" width="12" height="12"/>
+        <rect class="pad" x="934" y="704" width="12" height="12"/>
+        <rect class="padnc" x="934" y="764" width="12" height="12"/>
+        <text class="tn" x="954" y="790">GND ○</text>
+        <rect class="pad" x="1174" y="614" width="12" height="12"/>
+        <text class="tn" x="1168" y="608" text-anchor="end">Motor +</text>
+        <rect class="pad" x="1174" y="734" width="12" height="12"/>
+        <text class="tn" x="1168" y="728" text-anchor="end">Motor −</text>
+
+        <polyline class="w wgnd" points="1060,840 1060,976"/>
+        <circle class="pad" cx="1060" cy="976" r="4.5"/>
+
+        <!-- motor -->
+        <polyline class="w wmot" points="1180,620 1280,620"/>
+        <polyline class="w wmot" points="1180,740 1280,740"/>
+        <circle class="pad" cx="1230" cy="620" r="4"/>
+        <polyline class="w wmot" points="1230,620 1230,662"/>
+        <line x1="1212" y1="664" x2="1248" y2="664" stroke="var(--ink)" stroke-width="2.2"/>
+        <line x1="1212" y1="674" x2="1248" y2="674" stroke="var(--ink)" stroke-width="2.2"/>
+        <polyline class="w wmot" points="1230,676 1230,740"/>
+        <circle class="pad" cx="1230" cy="740" r="4"/>
+        <text class="tn" x="1204" y="706" text-anchor="end">C3</text>
+        <text class="tn" x="1204" y="722" text-anchor="end">100 nF</text>
+
+        <rect class="box" x="1280" y="580" width="160" height="200" rx="2"/>
+        <text class="tt" x="1360" y="612" text-anchor="middle">M1</text>
+        <circle cx="1360" cy="672" r="30" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <text class="tt" x="1360" y="680" text-anchor="middle">M</text>
+        <text class="ts" x="1360" y="726" text-anchor="middle">12 V linear</text>
+        <text class="ts" x="1360" y="742" text-anchor="middle">actuator</text>
+        <text class="ts" x="1360" y="764" text-anchor="middle">stall ≈ 0.5 A</text>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:var(--w12)"></i> +12 V (fused, from pack)</span>
+      <span><i style="background:var(--w5)"></i> +5 V (buck output)</span>
+      <span><i style="background:var(--w33)"></i> +3.3 V (U1 regulator)</span>
+      <span><i style="background:var(--wgnd)"></i> GND / return</span>
+      <span><i style="background:var(--wi2c)"></i> I²C</span>
+      <span><i style="background:var(--wctrl)"></i> Bridge control (3.3 V logic)</span>
+      <span><i style="background:var(--wmot)"></i> Motor leads</span>
+      <span><i class="glyph">●</i> Junction — connected</span>
+      <span><i class="glyph">╫</i> Crossing without ● — not connected</span>
+      <span><i class="glyph">□</i> Hollow pad — unused / no connection</span>
+      <span><i class="glyph">⊘</i> Reserved, do not use</span>
+      <span><i class="glyph">◆</i> On-board WS2812 status LED</span>
+    </div>
+
+    <figcaption>
+      <b>The current path is the whole design.</b> Pack → F1 → +12 V rail → U3's 0.1 Ω shunt → U2 Power + → motor. Because the shunt sits upstream of the bridge, one INA219 gives you both the motor current <em>and</em> the pack voltage, and its bus-voltage input never sees the chopped motor node. U3's own GND runs back to the star point as a separate wire so motor return current does not corrupt the measurement. <b>U2's VM and GND header pins are the same nets as the Power ± screw terminal</b> — populate one or the other, not both. Every pin of every module is drawn; unused ones are hollow.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Net list</h2>
+  <p>Build order for the perfboard. Everything in the 12 V group carries motor current — keep it short, thick, and away from the I²C pair.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th class="mono">Net</th><th>From</th><th>To</th><th class="mono">Wire</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>+12V_BAT</td><td>BAT1 +</td><td>F1</td><td class="mono">18 AWG</td><td>Screw terminal at the board edge</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>+12V_BAT</td><td>F1</td><td>D1 anode</td><td class="mono">18 AWG</td><td>D1 optional; omit and the polarity is on you</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>+12V</td><td>D1 cathode</td><td>+12 V rail</td><td class="mono">18 AWG</td><td>Rail = a length of bare 18 AWG along the board</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>+12V</td><td>+12 V rail</td><td>U4 IN+</td><td class="mono">22 AWG</td><td>Logic supply branch</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>+12V</td><td>+12 V rail</td><td>U3 VIN+</td><td class="mono">20 AWG</td><td>Motor branch enters the shunt here</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w12)"></span>VM</td><td>U3 VIN−</td><td>U2 Power +</td><td class="mono">20 AWG</td><td>Shunt output — the only path to the bridge</td></tr>
+        <tr class="groupsep"><td class="mono"><span class="dot" style="background:var(--wmot)"></span>M+</td><td>U2 Motor +</td><td>M1 lead A</td><td class="mono">20 AWG</td><td>Twist the pair; swap A/B if travel is inverted</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wmot)"></span>M−</td><td>U2 Motor −</td><td>M1 lead B</td><td class="mono">20 AWG</td><td>C3 100 nF across the two, at the motor end</td></tr>
+        <tr class="groupsep"><td class="mono"><span class="dot" style="background:var(--w5)"></span>+5V</td><td>U4 OUT+</td><td>U1 5V</td><td class="mono">24 AWG</td><td><strong>Verify 5.00 V before connecting</strong></td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--w33)"></span>+3V3</td><td>U1 3V3</td><td>U3 VCC</td><td class="mono">26 AWG</td><td>Also supplies the module's I²C pull-ups</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wi2c)"></span>SDA</td><td>U1 IO8</td><td>U3 SDA</td><td class="mono">26 AWG</td><td>Keep &lt; 15 cm, away from motor leads</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wi2c)"></span>SCL</td><td>U1 IO9</td><td>U3 SCL</td><td class="mono">26 AWG</td><td>Same pin as the BOOT button — see note below</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wctrl)"></span>IN1</td><td>U1 IO6</td><td>U2 IN1</td><td class="mono">26 AWG</td><td>High = drive towards UNLOCKED</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wctrl)"></span>IN2</td><td>U1 IO7</td><td>U2 IN2</td><td class="mono">26 AWG</td><td>High = drive towards LOCKED</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wctrl)"></span>IN1</td><td>U2 IN1</td><td>R1 10 k → GND</td><td class="mono">—</td><td>Fit at U2's header, not at U1</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wctrl)"></span>IN2</td><td>U2 IN2</td><td>R2 10 k → GND</td><td class="mono">—</td><td>Holds the bridge off while U1 resets</td></tr>
+        <tr class="groupsep"><td class="mono">C1</td><td>U2 Power +</td><td>U2 Power −</td><td class="mono">—</td><td>100 µF / 25 V electrolytic, &lt; 20 mm of lead</td></tr>
+        <tr><td class="mono">C2</td><td>U2 Power +</td><td>U2 Power −</td><td class="mono">—</td><td>100 nF ceramic, right next to C1</td></tr>
+        <tr class="groupsep"><td class="mono"><span class="dot" style="background:var(--wgnd)"></span>GND</td><td>BAT1 −</td><td>GND rail</td><td class="mono">18 AWG</td><td>This point is the star — nothing daisy-chains past it</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wgnd)"></span>GND</td><td>U2 Power −</td><td>GND rail</td><td class="mono">20 AWG</td><td>Motor return; own wire straight to the star</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wgnd)"></span>GND</td><td>U4 IN− and OUT−</td><td>GND rail</td><td class="mono">22 AWG</td><td>Both pads, joined at the board</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wgnd)"></span>GND</td><td>U1 GND</td><td>GND rail</td><td class="mono">24 AWG</td><td>Own wire — do not share with the motor return</td></tr>
+        <tr><td class="mono"><span class="dot" style="background:var(--wgnd)"></span>GND</td><td>U3 GND</td><td>GND rail</td><td class="mono">24 AWG</td><td>Own wire — this is the measurement reference</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Pinouts, in full</h2>
+
+  <h3>U1 — ESP32-C3-Zero (Waveshare)</h3>
+  <p>18 castellated pads at 2.54 mm: three power, fifteen GPIO. GPIO11–GPIO17 are consumed by the stacked 4 MB flash and are not brought out. The diagram assumes the board mounted with USB-C at the top; check your silkscreen before you commit solder.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">Edge</th><th class="mono">Pad</th><th>Wired to</th><th>Constraints worth knowing</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">L1</td><td class="mono">5V</td><td>U4 OUT+</td><td>Accepts 3.7–6 V. Feeds the on-board regulator.</td></tr>
+        <tr><td class="mono">L2</td><td class="mono">GND</td><td>GND rail</td><td>—</td></tr>
+        <tr><td class="mono">L3</td><td class="mono">3V3</td><td>U3 VCC</td><td>Regulator output. Budget ~200 mA for peripherals.</td></tr>
+        <tr><td class="mono">L4</td><td class="mono">GPIO0</td><td>SW1 (optional)</td><td>ADC1_CH0. Also the 32 kHz XTAL pin — fine as digital I/O.</td></tr>
+        <tr><td class="mono">L5</td><td class="mono">GPIO1</td><td>SW2 (optional)</td><td>ADC1_CH1.</td></tr>
+        <tr><td class="mono">L6</td><td class="mono">GPIO2</td><td class="nc">free</td><td><strong>Strapping pin</strong> — must be high or floating at boot. Do not pull it down.</td></tr>
+        <tr><td class="mono">L7</td><td class="mono">GPIO3</td><td class="nc">free</td><td>ADC1_CH3.</td></tr>
+        <tr><td class="mono">L8</td><td class="mono">GPIO4</td><td class="nc">free</td><td>ADC1_CH4.</td></tr>
+        <tr><td class="mono">L9</td><td class="mono">GPIO5</td><td>SW3 button (optional)</td><td>ADC2 — unusable as an ADC while Wi-Fi is on. Digital is fine.</td></tr>
+        <tr><td class="mono">R1</td><td class="mono">GPIO6</td><td>U2 IN1</td><td>Plain GPIO, no strapping role. Good choice for the bridge.</td></tr>
+        <tr><td class="mono">R2</td><td class="mono">GPIO7</td><td>U2 IN2</td><td>Plain GPIO.</td></tr>
+        <tr><td class="mono">R3</td><td class="mono">GPIO8</td><td>U3 SDA</td><td>Strapping pin that must be <em>high</em> at boot — the I²C pull-up satisfies that.</td></tr>
+        <tr><td class="mono">R4</td><td class="mono">GPIO9</td><td>U3 SCL</td><td>BOOT button. Held low at reset it enters the ROM bootloader; I²C idles high so it never does. Don't press BOOT while the bus is live.</td></tr>
+        <tr><td class="mono">R5</td><td class="mono">GPIO10</td><td>on-board WS2812</td><td>Status LED, no external wiring.</td></tr>
+        <tr><td class="mono">R6</td><td class="mono">GPIO18</td><td class="nc">reserved</td><td>USB D−. Leave open or you lose USB flashing and logging.</td></tr>
+        <tr><td class="mono">R7</td><td class="mono">GPIO19</td><td class="nc">reserved</td><td>USB D+.</td></tr>
+        <tr><td class="mono">R8</td><td class="mono">GPIO20</td><td class="nc">free</td><td>UART0 RX. Free here because logging goes over USB.</td></tr>
+        <tr><td class="mono">R9</td><td class="mono">GPIO21</td><td class="nc">free</td><td>UART0 TX.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>U2 — DRV8871 breakout (Adafruit 3190)</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">Terminal</th><th>Type</th><th>Wired to</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Power +</td><td>screw</td><td>U3 VIN−</td><td>6.5–45 V. Same net as the header's VM pin.</td></tr>
+        <tr><td class="mono">Power −</td><td>screw</td><td>GND rail</td><td>Same net as the header's GND pin.</td></tr>
+        <tr><td class="mono">Motor +</td><td>screw</td><td>M1 lead A</td><td>OUT1</td></tr>
+        <tr><td class="mono">Motor −</td><td>screw</td><td>M1 lead B</td><td>OUT2</td></tr>
+        <tr><td class="mono">VM</td><td>header</td><td class="nc">unused</td><td>Duplicate of Power +. Use one or the other.</td></tr>
+        <tr><td class="mono">IN1</td><td>header</td><td>U1 GPIO6</td><td>1.5 V logic threshold — 3.3 V drive is fine. 10 k to GND.</td></tr>
+        <tr><td class="mono">IN2</td><td>header</td><td>U1 GPIO7</td><td>10 k to GND.</td></tr>
+        <tr><td class="mono">GND</td><td>header</td><td class="nc">unused</td><td>Duplicate of Power −.</td></tr>
+        <tr><td class="mono">R<sub>ILIM</sub></td><td>on-board SMD</td><td>—</td><td>Sets the chip's own trip level to roughly 2 A. Leave it: F1 plus the firmware limit do the real work at 0.5 A.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>U3 — INA219 module, 0.1 Ω shunt</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">Pin</th><th>Wired to</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">VCC</td><td>U1 3V3</td><td>3.0–5.5 V. At 3.3 V the module's pull-ups match the ESP32's logic — no level shifter.</td></tr>
+        <tr><td class="mono">GND</td><td>GND rail (own wire)</td><td>Measurement reference. Route it to the star point, not through the motor return.</td></tr>
+        <tr><td class="mono">SCL</td><td>U1 GPIO9</td><td>10 k pull-up on the module.</td></tr>
+        <tr><td class="mono">SDA</td><td>U1 GPIO8</td><td>10 k pull-up on the module.</td></tr>
+        <tr><td class="mono">VIN+</td><td>+12 V rail</td><td>High side of the shunt. Common mode up to 26 V — 12.8 V is comfortable.</td></tr>
+        <tr><td class="mono">VIN−</td><td>U2 Power +</td><td>Low side of the shunt, and the bus-voltage sense node.</td></tr>
+        <tr><td class="mono">A0 / A1</td><td class="nc">open</td><td>Both open = address 0x40.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>U4 — MH-MINI-360 (MP1584EN)</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">Pad</th><th>Wired to</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">IN+</td><td>+12 V rail</td><td>4.75–23 V. A 4S LiFePO₄ pack at 14.6 V is well inside range.</td></tr>
+        <tr><td class="mono">IN−</td><td>GND rail</td><td>—</td></tr>
+        <tr><td class="mono">OUT+</td><td>U1 5V</td><td><strong>Set to 5.00 V with the trimpot before connecting U1.</strong></td></tr>
+        <tr><td class="mono">OUT−</td><td>GND rail</td><td>—</td></tr>
+        <tr><td class="mono">trimpot</td><td>—</td><td>Multi-turn; clockwise usually raises output. Measure, don't guess.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Optional position feedback <span class="refdes">Figure 2</span></h2>
+  <p>The firmware works without these — state survives a reboot in flash. But flash-restored state is a <em>belief</em>, not a measurement: if someone moves the bolt by hand while the board is off, it will be wrong. Two reed or micro switches turn that belief into a fact.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 940 400" role="img" aria-label="Optional switch wiring: GPIO0, GPIO1 and GPIO5 each go to one side of a switch; the other side of every switch returns to the GND rail. Internal pull-ups mean a closed switch reads as active.">
+        <rect class="box" x="60" y="70" width="190" height="270" rx="3"/>
+        <text class="tt" x="155" y="180" text-anchor="middle">U1</text>
+        <text class="ts" x="155" y="202" text-anchor="middle">left edge</text>
+        <text class="ts" x="155" y="220" text-anchor="middle">(detail)</text>
+
+        <rect class="pad" x="244" y="114" width="12" height="12"/>
+        <text class="t" x="234" y="125" text-anchor="end">IO0</text>
+        <rect class="pad" x="244" y="184" width="12" height="12"/>
+        <text class="t" x="234" y="195" text-anchor="end">IO1</text>
+        <rect class="pad" x="244" y="254" width="12" height="12"/>
+        <text class="t" x="234" y="265" text-anchor="end">IO5</text>
+        <rect class="pad" x="244" y="314" width="12" height="12"/>
+        <text class="t" x="234" y="325" text-anchor="end">GND</text>
+
+        <!-- SW1 -->
+        <polyline class="w wctrl" points="250,120 420,120"/>
+        <circle class="pad" cx="424" cy="120" r="4"/>
+        <line x1="424" y1="120" x2="486" y2="100" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="120" r="4"/>
+        <polyline class="w wgnd" points="500,120 700,120"/>
+        <text class="t"  x="424" y="82">SW1</text>
+        <text class="ts" x="470" y="146">reed or micro switch — bolt fully LOCKED</text>
+
+        <!-- SW2 -->
+        <polyline class="w wctrl" points="250,190 420,190"/>
+        <circle class="pad" cx="424" cy="190" r="4"/>
+        <line x1="424" y1="190" x2="486" y2="170" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="190" r="4"/>
+        <polyline class="w wgnd" points="500,190 700,190"/>
+        <text class="t"  x="424" y="152">SW2</text>
+        <text class="ts" x="470" y="216">reed or micro switch — bolt fully UNLOCKED</text>
+
+        <!-- SW3 -->
+        <polyline class="w wctrl" points="250,260 420,260"/>
+        <circle class="pad" cx="424" cy="260" r="4"/>
+        <line x1="424" y1="260" x2="486" y2="240" stroke="var(--ink)" stroke-width="1.8"/>
+        <circle class="pad" cx="500" cy="260" r="4"/>
+        <polyline class="w wgnd" points="500,260 700,260"/>
+        <text class="t"  x="424" y="222">SW3</text>
+        <text class="ts" x="470" y="286">momentary push-button — toggles the lock</text>
+
+        <polyline class="w wgnd" points="250,320 700,320"/>
+        <polyline class="w wgnd" points="700,120 700,320"/>
+        <circle class="pad" cx="700" cy="190" r="4.5"/>
+        <circle class="pad" cx="700" cy="260" r="4.5"/>
+        <circle class="pad" cx="700" cy="320" r="4.5"/>
+        <polyline class="w wgnd" points="700,320 860,320"/>
+        <text class="tn" x="716" y="344">to GND rail (Figure 1)</text>
+
+        <text class="ts" x="60" y="382">Internal pull-ups are enabled in firmware — a closed switch pulls the pin to GND and reads as active. Leaving these pads empty is harmless: the pins float high and read inactive.</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Fit them, then enable them.</b> Turn on the <em>Use position switches</em> entity in Home Assistant only once SW1 and SW2 are actually installed — with it on, a closed switch ends the move immediately and overrides the current-based verdict. For leads longer than about 30 cm add a 100 nF cap from each pin to GND at the ESP32 end.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>How a move ends <span class="refdes">Figure 3</span></h2>
+  <p>Every move is a race between four outcomes. The firmware samples the INA219 at 20 Hz, ignores the first 400 ms of inrush, then needs three consecutive samples past a threshold before it commits — one noisy reading never triggers anything.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1240 360" role="img" aria-label="Four current-versus-time panels. Panel one: current collapses to near zero, verdict success. Panel two: current rises to stall after the minimum travel time, verdict end of stroke. Panel three: current rises to stall before the minimum travel time, verdict jam. Panel four: current never changes, verdict timeout.">
+        <!-- panel 1 -->
+        <g>
+          <text class="tt" x="20" y="24" font-size="13">① LIMIT SWITCH OPENS</text>
+          <line class="axis" x1="20" y1="60" x2="20" y2="240"/>
+          <line class="axis" x1="20" y1="240" x2="290" y2="240"/>
+          <line class="thr" x1="20" y1="100" x2="290" y2="100"/>
+          <line class="thr" x1="20" y1="222" x2="290" y2="222"/>
+          <line class="thr" x1="140" y1="60" x2="140" y2="240"/>
+          <text class="tn" x="294" y="104">stall</text>
+          <text class="tn" x="294" y="226">idle</text>
+          <text class="tn" x="142" y="56">t_min</text>
+          <polyline class="trace" stroke="var(--ok)" points="24,238 34,66 52,152 210,152 222,232 288,232"/>
+          <text class="ts" x="20" y="272">Current collapses — the actuator's internal</text>
+          <text class="ts" x="20" y="290">switch cut the motor at end of stroke.</text>
+          <text class="t"  x="20" y="318" fill="var(--ok)">→ LOCKED / UNLOCKED</text>
+        </g>
+        <!-- panel 2 -->
+        <g>
+          <text class="tt" x="330" y="24" font-size="13">② HARD STOP, LATE</text>
+          <line class="axis" x1="330" y1="60" x2="330" y2="240"/>
+          <line class="axis" x1="330" y1="240" x2="600" y2="240"/>
+          <line class="thr" x1="330" y1="100" x2="600" y2="100"/>
+          <line class="thr" x1="330" y1="222" x2="600" y2="222"/>
+          <line class="thr" x1="450" y1="60" x2="450" y2="240"/>
+          <text class="tn" x="604" y="104">stall</text>
+          <text class="tn" x="604" y="226">idle</text>
+          <text class="tn" x="452" y="56">t_min</text>
+          <polyline class="trace" stroke="var(--ok)" points="334,238 344,66 362,152 510,152 526,86 588,86"/>
+          <text class="ts" x="330" y="272">No internal switch: the bolt simply reaches</text>
+          <text class="ts" x="330" y="290">its stop. Late stall = a normal stop.</text>
+          <text class="t"  x="330" y="318" fill="var(--ok)">→ LOCKED / UNLOCKED</text>
+        </g>
+        <!-- panel 3 -->
+        <g>
+          <text class="tt" x="640" y="24" font-size="13">③ HARD STOP, EARLY</text>
+          <line class="axis" x1="640" y1="60" x2="640" y2="240"/>
+          <line class="axis" x1="640" y1="240" x2="910" y2="240"/>
+          <line class="thr" x1="640" y1="100" x2="910" y2="100"/>
+          <line class="thr" x1="640" y1="222" x2="910" y2="222"/>
+          <line class="thr" x1="760" y1="60" x2="760" y2="240"/>
+          <text class="tn" x="914" y="104">stall</text>
+          <text class="tn" x="914" y="226">idle</text>
+          <text class="tn" x="762" y="56">t_min</text>
+          <polyline class="trace" stroke="var(--bad)" points="644,238 654,66 672,152 700,152 714,86 742,86"/>
+          <polyline class="trace" stroke="var(--bad)" stroke-dasharray="5 4" points="742,86 756,150 810,150 822,232 890,232" marker-end="url(#ar)" color="var(--bad)"/>
+          <text class="ts" x="640" y="272">Something is in the way. Coast, wait, then</text>
+          <text class="ts" x="640" y="290">drive back out for as long as it drove in.</text>
+          <text class="t"  x="640" y="318" fill="var(--bad)">→ JAMMED + alert</text>
+        </g>
+        <!-- panel 4 -->
+        <g>
+          <text class="tt" x="950" y="24" font-size="13">④ NOTHING HAPPENS</text>
+          <line class="axis" x1="950" y1="60" x2="950" y2="240"/>
+          <line class="axis" x1="950" y1="240" x2="1220" y2="240"/>
+          <line class="thr" x1="950" y1="100" x2="1220" y2="100"/>
+          <line class="thr" x1="950" y1="222" x2="1220" y2="222"/>
+          <line class="thr" x1="1070" y1="60" x2="1070" y2="240"/>
+          <text class="tn" x="1150" y="56">t_max</text>
+          <line class="thr" x1="1196" y1="60" x2="1196" y2="240"/>
+          <polyline class="trace" stroke="var(--bad)" points="954,238 964,66 982,152 1196,152"/>
+          <text class="ts" x="950" y="272">Neither threshold reached before t_max —</text>
+          <text class="ts" x="950" y="290">slipping clutch, broken linkage, bad wiring.</text>
+          <text class="t"  x="950" y="318" fill="var(--bad)">→ JAMMED + alert</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      <b>The only thing separating ② from ③ is the clock.</b> A stall after <code>min travel time</code> is the bolt arriving; the same stall before it is an obstruction. That one threshold is what you tune first, and it is why <code>min travel time</code> must be set from a measured stroke rather than guessed. Panels ③ and ④ also fire a <code>esphome.door_lock_fault</code> event and set the lock entity to <em>Jammed</em>. A fifth path exists but isn't drawn: current above the <em>hard current limit</em> aborts on the first sample, with no debounce at all.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Perfboard layout</h2>
+  <p>The schematic is drawn as three horizontal rails because that is how it should be built: a bare 18 AWG +12 V rail along the top, a bare 18 AWG GND rail along the bottom, logic in between. Beyond that:</p>
+  <ul>
+    <li><strong>C1 and C2 go at U2's power terminals</strong>, not near the battery. Perfboard wire has real inductance, and a 12 V motor switching on at the far end of 30 cm of it will brown out the bridge without them.</li>
+    <li><strong>Keep the motor loop tight.</strong> U3 → U2 → motor terminals should be the shortest run on the board. Twist the two motor leads together for their whole length.</li>
+    <li><strong>Star the grounds.</strong> Four separate returns land at BAT1 −: U2's motor return, U4's, U1's, U3's. Do not let U1 or U3 ground through U2's return path — that is the single most common cause of nonsense current readings.</li>
+    <li><strong>Put the I²C pair on the opposite side of U1</strong> from the motor wiring, and keep it under ~15 cm. The 10 k pull-ups on the INA219 module are weak; if the bus scan is flaky, add 4.7 k from SDA and SCL to 3V3.</li>
+    <li><strong>Screw terminals for anything leaving the board</strong> — pack, motor. Soldered flying leads on perfboard fail at the joint under vibration, and a door slams a lot.</li>
+    <li><strong>Fuse before everything.</strong> F1 is the only thing between a 4S LiFePO₄ pack and a shorted perfboard trace; that pack will deliver tens of amps into a fault without noticing.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Bill of materials</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="mono">Ref</th><th>Part</th><th>Spec</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">U1</td><td>Waveshare ESP32-C3-Zero</td><td>ESP32-C3FH4, 4 MB</td><td>Header version (-M) saves soldering castellations</td></tr>
+        <tr><td class="mono">U2</td><td>Adafruit DRV8871 breakout</td><td>6.5–45 V, 2 A / 3.6 A pk</td><td>—</td></tr>
+        <tr><td class="mono">U3</td><td>INA219 module</td><td>0.1 Ω, 0x40, ±3.2 A</td><td>Keep the 0.1 Ω shunt — at 0.5 A you want the resolution</td></tr>
+        <tr><td class="mono">U4</td><td>MH-MINI-360</td><td>MP1584EN, 1.8 A</td><td>Buy two; the trimpots are fragile</td></tr>
+        <tr><td class="mono">M1</td><td>12 V linear actuator</td><td>stall ≈ 0.5 A measured</td><td>Note whether it has internal limit switches</td></tr>
+        <tr><td class="mono">BAT1</td><td>LiFePO₄ 4S pack</td><td>12.8 V nom, BMS</td><td>10.0–14.6 V across the whole cycle</td></tr>
+        <tr><td class="mono">F1</td><td>Fuse + holder</td><td>2 A slow-blow</td><td>Or a 1.5 A polyfuse if you prefer self-resetting</td></tr>
+        <tr><td class="mono">D1</td><td>Schottky diode</td><td>SS54 / 1N5822</td><td>Optional reverse-polarity protection, ~0.4 V drop</td></tr>
+        <tr><td class="mono">C1</td><td>Electrolytic</td><td>100 µF / 25 V</td><td>35 V if the pack ever sees a charger</td></tr>
+        <tr><td class="mono">C2, C3</td><td>Ceramic</td><td>100 nF / 50 V</td><td>C2 at U2, C3 across the motor</td></tr>
+        <tr><td class="mono">R1, R2</td><td>Resistor</td><td>10 kΩ ¼ W</td><td>IN1/IN2 pull-downs</td></tr>
+        <tr><td class="mono">SW1, SW2</td><td>Reed or micro switch</td><td>NO, dry contact</td><td>Optional position feedback</td></tr>
+        <tr><td class="mono">SW3</td><td>Momentary push-button</td><td>NO</td><td>Optional local override</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Commissioning</h2>
+  <p>In this order. Steps 1–4 happen with the motor disconnected.</p>
+  <ol>
+    <li><strong>Set the buck.</strong> U4 on the pack, nothing on its output, meter on OUT+/OUT−, trim to 5.00 V. Power down.</li>
+    <li><strong>Bring up U1 alone.</strong> Flash <code>door_lock.yaml</code> over USB-C, then power it from U4 and confirm it joins Wi-Fi and Home Assistant.</li>
+    <li><strong>Confirm I²C.</strong> The log should print <code>Found i2c device at address 0x40</code> at boot. If it doesn't, add 4.7 k pull-ups before doing anything else.</li>
+    <li><strong>Check the sense path.</strong> With the motor unplugged but the 12 V branch live, the <em>supply voltage</em> sensor should read the pack voltage and <em>motor current</em> should read a few milliamps.</li>
+    <li><strong>Verify direction.</strong> Connect the motor. Press <em>Jog unlock</em> — a fixed 400 ms nudge with no protection logic. If the bolt goes the wrong way, swap the two motor leads at U2.</li>
+    <li><strong>Measure the real currents.</strong> Watch <em>motor current</em> while jogging repeatedly, and note the free-running value. Then hold the bolt and jog again to confirm the ~0.5 A stall.</li>
+    <li><strong>Set the thresholds</strong> from what you measured (next section).</li>
+    <li><strong>Measure the stroke.</strong> One full move; read <em>last move duration</em>. Set <code>min travel time</code> to about 70 % of it and <code>max travel time</code> to about 150 %.</li>
+    <li><strong>Test the jam path.</strong> Block the bolt with something soft mid-travel and command a move. It must stop, reverse out, report <em>Jammed</em>, and set the fault sensor.</li>
+  </ol>
+
+  <h3>Setting the thresholds</h3>
+  <p>All six are Home Assistant number entities, stored in flash — no reflashing to tune. What matters is that the free-running current sits clearly between <code>idle current</code> and <code>stall current</code>:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Entity</th><th class="mono">Default</th><th>How to pick it</th></tr></thead>
+      <tbody>
+        <tr><td>Idle current</td><td class="mono">0.04 A</td><td>Well below free-running, above the standing draw with the motor stopped. Three samples under this = limit switch opened.</td></tr>
+        <tr><td>Stall current</td><td class="mono">0.40 A</td><td>Roughly midway between free-running and the 0.5 A stall. Raise it if normal moves trip a false jam.</td></tr>
+        <tr><td>Hard current limit</td><td class="mono">0.60 A</td><td>Just above stall. Trips on a single sample, no debounce — the fast path for a hard mechanical block.</td></tr>
+        <tr><td>Inrush blanking</td><td class="mono">400 ms</td><td>Long enough to cover the startup spike. Shorten it only if you can see the spike is over sooner in the logs.</td></tr>
+        <tr><td>Min travel time</td><td class="mono">1500 ms</td><td>≈ 70 % of the measured full stroke. Below this, a stall means an obstruction.</td></tr>
+        <tr><td>Max travel time</td><td class="mono">9000 ms</td><td>≈ 150 % of the measured full stroke. Reaching it is a timeout fault.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="label">If free-running current is close to stall current</span>
+    <p>A 0.5 A stall is low, which means the gap between running and stalled may be narrow — and that is what the whole detection scheme rests on. If you measure, say, 0.35 A running against 0.50 A stalled, current alone is too coarse: fit SW1/SW2 from Figure 2 and let the switches call end-of-travel, leaving current detection purely as the jam guard.</p>
+  </div>
+</section>
+
+<section>
+  <h2>What Home Assistant gets</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Entity</th><th>Type</th><th>What it's for</th></tr></thead>
+      <tbody>
+        <tr><td>Door lock</td><td class="mono">lock</td><td>Lock / unlock. Reports Locking, Unlocking, Locked, Unlocked, or <strong>Jammed</strong>.</td></tr>
+        <tr><td>Motor current</td><td class="mono">sensor</td><td>1 Hz. The state machine runs off a faster internal copy at 20 Hz.</td></tr>
+        <tr><td>Supply voltage</td><td class="mono">sensor</td><td>Pack voltage from the same INA219 — free LiFePO₄ monitoring.</td></tr>
+        <tr><td>Last move peak current</td><td class="mono">sensor</td><td>Diagnostic. Trend it and you'll see the mechanism stiffening up before it fails.</td></tr>
+        <tr><td>Last move duration</td><td class="mono">sensor</td><td>Diagnostic. Also how you set the travel-time thresholds.</td></tr>
+        <tr><td>Fault</td><td class="mono">binary_sensor</td><td>Problem class. Latches until cleared.</td></tr>
+        <tr><td>Last result</td><td class="mono">text_sensor</td><td>Plain text: <code>locked</code>, <code>obstruction — stalled mid-travel</code>, and so on.</td></tr>
+        <tr><td>Stop</td><td class="mono">button</td><td>Aborts a move immediately, state goes unknown.</td></tr>
+        <tr><td>Clear fault</td><td class="mono">button</td><td>Drops the fault flag and the red LED.</td></tr>
+        <tr><td>Jog unlock / Jog lock</td><td class="mono">button</td><td>400 ms bench nudge, no protection logic.</td></tr>
+        <tr><td>Use position switches</td><td class="mono">switch</td><td>Off by default. Turn on once SW1/SW2 exist.</td></tr>
+        <tr><td>Six thresholds</td><td class="mono">number</td><td>Config category. Stored in flash.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Alerting on a failed move</h3>
+  <p>Two independent hooks, so pick whichever fits your setup. The lock entity going to <code>jammed</code>:</p>
+<pre><code>automation:
+  - alias: Door lock jammed
+    trigger:
+      - platform: state
+        entity_id: lock.door_lock
+        to: "jammed"
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: Door lock failed
+          message: >-
+            {{ states('sensor.door_lock_last_result') }} —
+            peak {{ states('sensor.door_lock_last_move_peak_current') }} A
+</code></pre>
+  <p>…or the event the firmware fires, which carries the detail as attributes:</p>
+<pre><code>automation:
+  - alias: Door lock fault event
+    trigger:
+      - platform: event
+        event_type: esphome.door_lock_fault
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "Door lock: {{ trigger.event.data.reason }}"
+          message: >-
+            While {{ trigger.event.data.direction }} —
+            {{ trigger.event.data.peak_current }} A after
+            {{ trigger.event.data.travel_ms }} ms
+</code></pre>
+</section>
+
+<section>
+  <h2>Firmware notes</h2>
+  <p>The config lives in <code>door_lock.yaml</code>; copy <code>secrets.yaml.example</code> to <code>secrets.yaml</code> and fill it in first. A few decisions in there that are easy to undo by accident:</p>
+  <ul>
+    <li><strong>No PWM on the bridge.</strong> <code>output: gpio</code>, not <code>ledc</code>. Switching to PWM chops the current the shunt sees and breaks every threshold in Figure 3.</li>
+    <li><strong>Both inputs low means coast</strong>, and the DRV8871 drops into low-power sleep after about a millisecond of it — which is what you want between moves on a battery. The firmware never uses the brake state (both inputs high).</li>
+    <li><strong>The fast current sensor is <code>internal: true</code></strong> and polled at 50 ms. Everything Home Assistant sees is a slower derived copy, so the API isn't flooded with 20 values a second.</li>
+    <li><strong>A 500 ms watchdog interval</strong> force-coasts the bridge if it is ever still energised well past <code>max travel time</code>, independently of the move script. Combined with R1/R2 holding the inputs down through reset, there is no state in which the actuator runs unattended.</li>
+    <li><strong>Reversing after a jam is time-based</strong> — it drives back out for as long as it drove in, capped at 4 s. That path has no stall detection of its own, deliberately: if the obstruction is on the retreat side too, you want the fault raised rather than an infinite shuffle.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>Sources: <a href="https://docs.waveshare.com/ESP32-C3-Zero">Waveshare ESP32-C3-Zero documentation</a> · <a href="https://www.espboards.dev/esp32/esp32-c3-zero/">ESP32-C3-Zero pinout reference</a> · <a href="https://botland.com.pl/sterowniki-silnikow-dc/7043-drv8871-jednokanalowy-sterownik-silnikow-45v36a-adafruit-3190-5904422335373.html">DRV8871 breakout (Botland)</a> · <a href="https://www.gotronik.pl/ina219-dwukierunkowy-czujnik-pradu-z-szyna-i2c-p-5736.html">INA219 module (Gotronik)</a></p>
+  <p>Pin positions in Figure 1 assume U1 mounted with USB-C uppermost, power pads on the left edge. Verify against the silkscreen before soldering.</p>
+</footer>
+
+</div>
+</body>
+</html>
