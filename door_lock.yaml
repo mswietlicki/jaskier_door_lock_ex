@@ -232,10 +232,8 @@ sensor:
       filters:
         - throttle: 60s
         - delta: 0.05
-    shunt_voltage:
-      internal: true
-    power:
-      internal: true
+    # shunt_voltage and power are simply not declared - nothing needs them, and a
+    # sub-sensor block requires an id: or a name: even when it is internal.
 
   - platform: template
     name: "${friendly} motor current"
