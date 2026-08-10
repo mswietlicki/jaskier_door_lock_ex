@@ -591,8 +591,8 @@
         <text class="ts" x="1050" y="196" text-anchor="middle">0.1 Ω shunt · addr 0x40</text>
         <text class="ts" x="1050" y="214" text-anchor="middle">VS 3.0 – 5.5 V</text>
         <text class="ts" x="1050" y="232" text-anchor="middle">bus ≤ 26 V · 0.8 mA LSB</text>
-        <text class="ts" x="1050" y="256" text-anchor="middle">all six pins sit on</text>
-        <text class="ts" x="1050" y="272" text-anchor="middle">one 6-way header</text>
+        <text class="ts" x="1050" y="256" text-anchor="middle">VIN± appear twice: header</text>
+        <text class="ts" x="1050" y="272" text-anchor="middle">+ big pads, same net</text>
         <text class="ts" x="1050" y="296" text-anchor="middle">A0 / A1 open = 0x40</text>
 
         <rect class="pad" x="934" y="174" width="12" height="12"/>
@@ -745,6 +745,12 @@
       </tbody>
     </table>
   </div>
+
+  <div class="callout warn">
+    <span class="label">Never bridge the shunt</span>
+    <p>U3 brings <code>VIN+</code> and <code>VIN−</code> out twice — as large pads for load current and again on the 6-way header. Each pair is the same copper, with a single 0.1 Ω shunt between them. Wire the <strong>big pair only</strong> and leave the header pins empty.</p>
+    <p>Land two wires from the same side of the circuit on both footprints and you short across the shunt. The motor still runs normally, so nothing looks broken — but current reads ≈ 0 A forever, every move ends instantly as "current collapsed", and jam detection never fires. Before wiring, check with a meter: <code>VIN+</code> to <code>VIN−</code> should read about <strong>0.1 Ω</strong>, and big-to-small on the same name about <strong>0 Ω</strong>.</p>
+  </div>
 </section>
 
 <section>
@@ -805,8 +811,9 @@
         <tr><td class="mono">GND</td><td>GND rail (own wire)</td><td>Measurement reference. Route it to the star point, not through the motor return.</td></tr>
         <tr><td class="mono">SCL</td><td>U1 GPIO9</td><td>10 k pull-up on the module.</td></tr>
         <tr><td class="mono">SDA</td><td>U1 GPIO8</td><td>10 k pull-up on the module.</td></tr>
-        <tr><td class="mono">VIN+</td><td>+12 V rail</td><td>High side of the shunt. Common mode up to 26 V — 12.8 V is comfortable.</td></tr>
-        <tr><td class="mono">VIN−</td><td>U2 Power +</td><td>Low side of the shunt, and the bus-voltage sense node.</td></tr>
+        <tr><td class="mono">VIN+</td><td>+12 V rail</td><td>High side of the shunt. Common mode up to 26 V — 12.8 V is comfortable. <strong>Use the big pad, not the header pin.</strong></td></tr>
+        <tr><td class="mono">VIN−</td><td>U2 Power +</td><td>Low side of the shunt, and the bus-voltage sense node. <strong>Big pad.</strong></td></tr>
+        <tr><td class="mono">VIN+ / VIN− <span class="nc">(header)</span></td><td class="nc">leave empty</td><td>Duplicates of the pads above — same copper, one 0.1 Ω shunt between them. Populate one pair only.</td></tr>
         <tr><td class="mono">A0 / A1</td><td class="nc">open</td><td>Both open = address 0x40.</td></tr>
       </tbody>
     </table>

@@ -231,8 +231,8 @@
         <text class="ts" x="1050" y="196" text-anchor="middle">0.1 Ω shunt · addr 0x40</text>
         <text class="ts" x="1050" y="214" text-anchor="middle">VS 3.0 – 5.5 V</text>
         <text class="ts" x="1050" y="232" text-anchor="middle">bus ≤ 26 V · 0.8 mA LSB</text>
-        <text class="ts" x="1050" y="256" text-anchor="middle">all six pins sit on</text>
-        <text class="ts" x="1050" y="272" text-anchor="middle">one 6-way header</text>
+        <text class="ts" x="1050" y="256" text-anchor="middle">VIN± appear twice: header</text>
+        <text class="ts" x="1050" y="272" text-anchor="middle">+ big pads, same net</text>
         <text class="ts" x="1050" y="296" text-anchor="middle">A0 / A1 open = 0x40</text>
 
         <rect class="pad" x="934" y="174" width="12" height="12"/>
