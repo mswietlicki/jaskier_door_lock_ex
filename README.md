@@ -174,9 +174,21 @@ The firmware never uses brake.
 | `GND` | GND rail (own wire) | Measurement reference. Route to the star point, not through the motor return. |
 | `SCL` | U1 GPIO9 | 10 k pull-up on the module. |
 | `SDA` | U1 GPIO8 | 10 k pull-up on the module. |
-| `VIN+` | +12 V rail | High side of the shunt. Common mode up to 26 V — 12.8 V is comfortable. |
-| `VIN−` | U2 Power + | Low side of the shunt, and the bus-voltage sense node. |
+| `VIN+` | +12 V rail | High side of the shunt. Common mode up to 26 V — 12.8 V is comfortable. **Use the big pad, not the header pin.** |
+| `VIN−` | U2 Power + | Low side of the shunt, and the bus-voltage sense node. **Big pad.** |
+| `VIN+` / `VIN−` *(header)* | *leave empty* | Duplicates of the pads above — same copper, one 0.1 Ω shunt between them. Populate one pair only. |
 | `A0` / `A1` | *open* | Both open = address 0x40. |
+
+> [!WARNING]
+> **Never bridge the shunt.** U3 brings `VIN+` and `VIN−` out twice: as large pads for
+> load current, and again on the 6-way header. Each pair is the same copper. Wire the
+> **big pair only** and leave the header pins empty.
+>
+> Land two wires from the same side of the circuit on both footprints and you short across
+> the shunt. The motor still runs normally, so nothing looks broken — but current reads
+> ≈ 0 A forever, every move ends instantly as "current collapsed", and jam detection never
+> fires. Before wiring, check with a meter: `VIN+` to `VIN−` should read about **0.1 Ω**,
+> and big-to-small on the same name about **0 Ω**.
 
 ### U4 — MH-MINI-360 (MP1584EN)
 
@@ -292,7 +304,9 @@ In this order. Steps 1–4 happen with the motor disconnected.
 3. **Confirm I²C.** The log should print `Found i2c device at address 0x40` at boot. If it
    doesn't, add 4.7 k pull-ups before doing anything else.
 4. **Check the sense path.** With the motor unplugged but the 12 V branch live, *supply
-   voltage* should read the pack voltage and *motor current* a few milliamps.
+   voltage* should read the pack voltage and *motor current* a few milliamps. If current
+   reads a dead flat 0.000 A, suspect a bridged shunt before anything else — measure 0.1 Ω
+   across U3's `VIN+`/`VIN−` with the power off.
 5. **Verify direction.** Connect the motor. Press *Jog unlock* — a fixed 400 ms nudge with
    no protection logic. If the bolt goes the wrong way, swap the two motor leads at U2.
 6. **Measure the real currents.** Watch *motor current* while jogging repeatedly and note
