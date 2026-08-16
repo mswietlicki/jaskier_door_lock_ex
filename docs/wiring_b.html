@@ -1307,7 +1307,7 @@
       </svg>
     </div>
     <figcaption>
-      <b>The only thing separating ② from ③ is the clock.</b> A stall after <code>min travel time</code> is the bolt arriving; the same stall before it is an obstruction. That one threshold is what you tune first, and it is why <code>min travel time</code> must be set from a measured stroke rather than guessed. Panels ③ and ④ also fire a <code>esphome.door_lock_fault</code> event and set the lock entity to <em>Jammed</em>. A fifth path exists but isn't drawn: current above the <em>hard current limit</em> aborts on the first sample, with no debounce at all.
+      <b>The only thing separating ② from ③ is the clock.</b> A stall after <code>min travel time</code> is the bolt arriving; the same stall before it is an obstruction. That one threshold is what you tune first, and it is why <code>min travel time</code> must be set from a measured stroke rather than guessed. Panels ③ and ④ also fire a <code>esphome.door_lock_fault</code> event and set the lock entity to <em>Jammed</em>. A fifth path exists but isn't drawn: after inrush blanking, current above the <em>hard current limit</em> aborts on the first sample, with no debounce. Three invalid current samples latch a sensor fault without attempting back-off.
     </figcaption>
   </figure>
 </section>
@@ -1368,12 +1368,12 @@
     <table>
       <thead><tr><th>Entity (× 4 doors)</th><th class="mono">Default</th><th>How to pick it</th></tr></thead>
       <tbody>
-        <tr><td>Door n idle current</td><td class="mono">0.04 A</td><td>Well below free-running, above the standing draw with the motor stopped.</td></tr>
+        <tr><td>Door n idle current</td><td class="mono">0.01 A</td><td>Well below the commissioned 0.04–0.06 A free-running current, above the ≈0.003 A standing reading.</td></tr>
         <tr><td>Door n stall current</td><td class="mono">0.40 A</td><td>Roughly midway between this door's free-running and stall.</td></tr>
-        <tr><td>Door n hard current limit</td><td class="mono">0.60 A</td><td>Just above this door's stall. Single sample, no debounce.</td></tr>
+        <tr><td>Door n hard current limit</td><td class="mono">0.60 A</td><td>Just above this door's stall. After blanking: single sample, no debounce.</td></tr>
         <tr><td>Door n inrush blanking</td><td class="mono">400 ms</td><td>Long enough to cover this actuator's startup spike.</td></tr>
         <tr><td>Door n min travel time</td><td class="mono">1500 ms</td><td>≈ 70 % of this door's measured full stroke.</td></tr>
-        <tr><td>Door n max travel time</td><td class="mono">9000 ms</td><td>≈ 150 % of this door's measured full stroke.</td></tr>
+        <tr><td>Door n max travel time</td><td class="mono">4500 ms</td><td>Commissioned stroke plus cold-weather margin.</td></tr>
       </tbody>
     </table>
   </div>
