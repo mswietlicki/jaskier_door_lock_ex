@@ -370,6 +370,7 @@
   <p class="eyebrow">Bench build · perfboard prototype</p>
   <h1>12 V Linear-Actuator Door Lock</h1>
   <p class="standfirst">ESP32-C3-Zero running ESPHome, DRV8871 H-bridge, INA219 high-side current monitor, MH-MINI-360 buck, off a 4S LiFePO<sub>4</sub> pack. End of travel and obstructions are both read out of the motor current — no extra sensors required.</p>
+  <p class="standfirst">This document covers <strong>variant A</strong> (one door, <code>door_lock_a.yaml</code>). Variant B puts four independent doors on one board with an ESP32-S3 — same per-door circuit and rules, replicated four times; its own build document is <a href="wiring_b.html">wiring_b.html</a>.</p>
 
   <dl class="specstrip">
     <div><dt>Pack</dt><dd>4S LiFePO₄ · 10.0–14.6 V</dd></div>
@@ -1020,7 +1021,7 @@
   <p>In this order. Steps 1–4 happen with the motor disconnected.</p>
   <ol>
     <li><strong>Set the buck.</strong> U4 on the pack, nothing on its output, meter on OUT+/OUT−, trim to 5.00 V. Power down.</li>
-    <li><strong>Bring up U1 alone.</strong> Flash <code>door_lock.yaml</code> over USB-C, then power it from U4 and confirm it joins Wi-Fi and Home Assistant.</li>
+    <li><strong>Bring up U1 alone.</strong> Flash <code>door_lock_a.yaml</code> over USB-C, then power it from U4 and confirm it joins Wi-Fi and Home Assistant.</li>
     <li><strong>Confirm I²C.</strong> The log should print <code>Found i2c device at address 0x40</code> at boot. If it doesn't, add 4.7 k pull-ups before doing anything else.</li>
     <li><strong>Check the sense path.</strong> With the motor unplugged but the 12 V branch live, the <em>supply voltage</em> sensor should read the pack voltage and <em>motor current</em> should read a few milliamps.</li>
     <li><strong>Verify direction.</strong> Connect the motor. Press <em>Jog unlock</em> — a fixed 400 ms nudge with no protection logic. If the bolt goes the wrong way, swap the two motor leads at U2.</li>
@@ -1109,7 +1110,7 @@
 
 <section>
   <h2>Firmware notes</h2>
-  <p>The config lives in <code>door_lock.yaml</code>; copy <code>secrets.yaml.example</code> to <code>secrets.yaml</code> and fill it in first. A few decisions in there that are easy to undo by accident:</p>
+  <p>The config lives in <code>door_lock_a.yaml</code>; copy <code>secrets.yaml.example</code> to <code>secrets.yaml</code> and fill it in first. A few decisions in there that are easy to undo by accident:</p>
   <ul>
     <li><strong>No PWM on the bridge.</strong> <code>output: gpio</code>, not <code>ledc</code>. Switching to PWM chops the current the shunt sees and breaks every threshold in Figure 3.</li>
     <li><strong>Both inputs low means coast</strong>, and the DRV8871 drops into low-power sleep after about a millisecond of it — which is what you want between moves on a battery. The firmware never uses the brake state (both inputs high).</li>

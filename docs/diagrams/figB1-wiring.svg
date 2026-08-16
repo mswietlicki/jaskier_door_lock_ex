@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 2080" role="img" aria-label="Complete wiring diagram for variant B: a fused 12 volt rail feeds an MH-MINI-360 buck for the ESP32-S3-DevKitC-1 and four identical door branches. Each branch runs from the rail through its own INA219 shunt into a DRV8871 H-bridge and motor. All four INA219s share one I2C bus on GPIO8 and GPIO9 at addresses 0x40, 0x41, 0x44 and 0x45; each bridge is driven by its own GPIO pair.">
+  <title>Figure B1 - Variant B complete wiring diagram, four doors</title>
+  <style>
+    svg {
+      --ink:#121A1F; --ink-2:#3B474E; --muted:#5B686F;
+      --surface:#FFFFFF; --surface-2:#F3F6F7; --line:#CFD9DE; --line-soft:#E1E8EB;
+      --w12:#C4322A; --w5:#D07B22; --w33:#A03D86; --wgnd:#3E4A51;
+      --wi2c:#1E6FAF; --wctrl:#2A7F4F; --wmot:#6A4CA0;
+      --ok:#2A7F4F; --warn:#B07A10; --bad:#B8332A;
+      --font-display:"Bahnschrift SemiCondensed","Bahnschrift","DIN Alternate","Segoe UI Semibold","Segoe UI",sans-serif;
+      --font-body:"Segoe UI",Corbel,system-ui,sans-serif;
+      --font-mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace;
+      background:#FFFFFF; color:var(--ink);
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --ink:#E6ECEF; --ink-2:#BCC7CD; --muted:#8B989F;
+        --surface:#151C21; --surface-2:#1B242A; --line:#28343B; --line-soft:#202B31;
+        --w12:#E8635A; --w5:#E9A54A; --w33:#D174B7; --wgnd:#93A2AA;
+        --wi2c:#58A8E4; --wctrl:#57BE85; --wmot:#A78BDC;
+        --ok:#57BE85; --warn:#E0B44A; --bad:#F0736A;
+        background:#151C21;
+      }
+    }
+    .box   { fill:var(--surface-2); stroke:var(--ink); stroke-width:1.6; }
+    .comp  { fill:var(--surface); stroke:var(--ink); stroke-width:1.5; }
+    .pad   { fill:var(--ink); stroke:none; }
+    .padnc { fill:var(--surface); stroke:var(--muted); stroke-width:1.3; }
+    .t     { font-family:var(--font-mono); font-size:12.5px; fill:var(--ink); }
+    .tt    { font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.04em; fill:var(--ink); }
+    .ts    { font-family:var(--font-body); font-size:11.5px; fill:var(--muted); }
+    .tn    { font-family:var(--font-mono); font-size:11px; fill:var(--muted); }
+    .w     { fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+    .rail  { stroke-width:3.6; fill:none; stroke-linecap:round; }
+    .w12   { stroke:var(--w12); }
+    .w5    { stroke:var(--w5); }
+    .w33   { stroke:var(--w33); }
+    .wgnd  { stroke:var(--wgnd); }
+    .wi2c  { stroke:var(--wi2c); }
+    .wctrl { stroke:var(--wctrl); }
+    .wmot  { stroke:var(--wmot); stroke-width:2.8; }
+  </style>
+        <!-- ============ RAILS ============ -->
+        <polyline class="rail w12" points="90,70 990,70 990,1550"/>
+        <text class="tt" x="90" y="44" fill="var(--w12)">+12 V RAIL (fused, 5 A)</text>
+        <text class="tn" x="1002" y="64">+12 V</text>
+        <polyline class="rail wgnd" points="1540,320 1540,2010 90,2010"/>
+        <text class="tt" x="90" y="2044" fill="var(--wgnd)">GND RAIL</text>
+        <text class="ts" x="240" y="2044">— single star point at BAT1 −, all ten returns land here</text>
+        <text class="tn" x="1550" y="316">GND</text>
+        <text class="ts" x="1050" y="120">four identical branches: rail → shunt → bridge → motor.</text>
+        <text class="ts" x="1050" y="138">Only the ESP pins and the INA219 address differ per door.</text>
+
+        <!-- ============ BAT1 ============ -->
+        <rect class="box" x="150" y="1730" width="230" height="140" rx="2"/>
+        <text class="tt" x="166" y="1762">BAT1</text>
+        <text class="t"  x="166" y="1786">LiFePO₄ 4S</text>
+        <text class="ts" x="166" y="1808">12.8 V nominal</text>
+        <text class="ts" x="166" y="1826">10.0 – 14.6 V</text>
+        <text class="ts" x="166" y="1844">BMS-protected pack</text>
+        <rect class="pad" x="144" y="1758" width="12" height="12"/>
+        <text class="t" x="162" y="1728" text-anchor="middle">+</text>
+        <rect class="pad" x="194" y="1864" width="12" height="12"/>
+        <text class="t" x="212" y="1888">−</text>
+
+        <polyline class="w w12" points="150,1764 90,1764 90,1700"/>
+        <rect class="comp" x="74" y="1660" width="32" height="40" rx="2"/>
+        <line x1="82" y1="1694" x2="98" y2="1666" stroke="var(--ink)" stroke-width="1.4"/>
+        <text class="t"  x="116" y="1676">F1</text>
+        <text class="ts" x="116" y="1694">5 A slow-blow</text>
+        <polyline class="w w12" points="90,1660 90,1622"/>
+        <polygon class="comp" points="76,1622 104,1622 90,1590"/>
+        <line x1="76" y1="1588" x2="104" y2="1588" stroke="var(--ink)" stroke-width="2"/>
+        <text class="t"  x="116" y="1608">D1</text>
+        <text class="ts" x="116" y="1626">SS54 · reverse-polarity (optional)</text>
+        <polyline class="w w12" points="90,1586 90,70"/>
+        <circle class="pad" cx="90" cy="70" r="4.5"/>
+        <polyline class="w wgnd" points="200,1876 200,2010"/>
+        <circle class="pad" cx="200" cy="2010" r="4.5"/>
+        <text class="tn" x="212" y="1980">star point</text>
+
+        <!-- ============ U4 BUCK ============ -->
+        <rect class="box" x="150" y="170" width="240" height="150" rx="2"/>
+        <text class="tt" x="200" y="224">U4  MH-MINI-360</text>
+        <text class="ts" x="200" y="246">MP1584EN · 1.8 A</text>
+        <text class="t"  x="200" y="288" fill="var(--w5)">SET TO 5.00 V FIRST</text>
+        <text class="ts" x="200" y="306">trim before connecting U1</text>
+        <rect class="pad" x="144" y="198" width="12" height="12"/>
+        <text class="tn" x="164" y="208">IN+</text>
+        <rect class="pad" x="144" y="258" width="12" height="12"/>
+        <text class="tn" x="164" y="268">IN−</text>
+        <rect class="pad" x="384" y="198" width="12" height="12"/>
+        <text class="tn" x="378" y="194" text-anchor="end">OUT+</text>
+        <rect class="pad" x="384" y="258" width="12" height="12"/>
+        <text class="tn" x="378" y="252" text-anchor="end">OUT−</text>
+        <polyline class="w w12" points="144,204 120,204 120,70"/>
+        <circle class="pad" cx="120" cy="70" r="4.5"/>
+        <polyline class="w wgnd" points="144,264 130,264 130,2010"/>
+        <polyline class="w wgnd" points="396,264 410,264 410,336 130,336"/>
+        <circle class="pad" cx="130" cy="336" r="4.5"/>
+        <circle class="pad" cx="130" cy="2010" r="4.5"/>
+        <polyline class="w w5" points="396,204 440,204 440,340 468,340"/>
+        <text class="tn" x="452" y="198" fill="var(--w5)">5.00 V</text>
+
+        <!-- ============ U1 ESP32-S3-DevKitC-1 ============ -->
+        <rect class="box" x="480" y="300" width="280" height="1600" rx="3"/>
+        <rect x="585" y="288" width="70" height="14" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"/>
+        <text class="tn" x="620" y="282" text-anchor="middle">2 × USB-C</text>
+        <text class="tt" x="620" y="1450" text-anchor="middle">U1</text>
+        <text class="t"  x="620" y="1474" text-anchor="middle">ESP32-S3-DevKitC-1</text>
+        <text class="ts" x="620" y="1494" text-anchor="middle">ESP32-S3-WROOM-1</text>
+        <text class="ts" x="620" y="1512" text-anchor="middle">N8R2 / N16R8</text>
+        <text class="ts" x="620" y="1538" text-anchor="middle">pins drawn logically —</text>
+        <text class="ts" x="620" y="1554" text-anchor="middle">physical header positions</text>
+        <text class="ts" x="620" y="1570" text-anchor="middle">in the pinout table</text>
+
+        <!-- left edge: power -->
+        <rect class="pad" x="468" y="334" width="12" height="12"/>
+        <text class="t" x="492" y="344">5V</text>
+        <rect class="pad" x="468" y="384" width="12" height="12"/>
+        <text class="t" x="492" y="394">GND</text>
+        <rect class="pad" x="468" y="434" width="12" height="12"/>
+        <text class="t" x="492" y="444">3V3</text>
+
+        <!-- left edge: optional inputs (Figure 2) -->
+        <text class="ts" x="452" y="490" text-anchor="end">optional inputs — Figure 2</text>
+        <rect class="padnc" x="468" y="514" width="12" height="12"/>
+        <text class="t" x="492" y="524">IO10</text>
+        <text class="tn" x="452" y="524" text-anchor="end">SW-L1 · d1 bolt locked</text>
+        <rect class="padnc" x="468" y="564" width="12" height="12"/>
+        <text class="t" x="492" y="574">IO11</text>
+        <text class="tn" x="452" y="574" text-anchor="end">SW-U1 · d1 bolt unlocked</text>
+        <rect class="padnc" x="468" y="614" width="12" height="12"/>
+        <text class="t" x="492" y="624">IO39</text>
+        <text class="tn" x="452" y="624" text-anchor="end">BTN1 · d1 button</text>
+        <rect class="padnc" x="468" y="684" width="12" height="12"/>
+        <text class="t" x="492" y="694">IO12</text>
+        <text class="tn" x="452" y="694" text-anchor="end">SW-L2</text>
+        <rect class="padnc" x="468" y="734" width="12" height="12"/>
+        <text class="t" x="492" y="744">IO13</text>
+        <text class="tn" x="452" y="744" text-anchor="end">SW-U2</text>
+        <rect class="padnc" x="468" y="784" width="12" height="12"/>
+        <text class="t" x="492" y="794">IO40</text>
+        <text class="tn" x="452" y="794" text-anchor="end">BTN2</text>
+        <rect class="padnc" x="468" y="854" width="12" height="12"/>
+        <text class="t" x="492" y="864">IO14</text>
+        <text class="tn" x="452" y="864" text-anchor="end">SW-L3</text>
+        <rect class="padnc" x="468" y="904" width="12" height="12"/>
+        <text class="t" x="492" y="914">IO21</text>
+        <text class="tn" x="452" y="914" text-anchor="end">SW-U3</text>
+        <rect class="padnc" x="468" y="954" width="12" height="12"/>
+        <text class="t" x="492" y="964">IO41</text>
+        <text class="tn" x="452" y="964" text-anchor="end">BTN3</text>
+        <rect class="padnc" x="468" y="1024" width="12" height="12"/>
+        <text class="t" x="492" y="1034">IO1</text>
+        <text class="tn" x="452" y="1034" text-anchor="end">SW-L4</text>
+        <rect class="padnc" x="468" y="1074" width="12" height="12"/>
+        <text class="t" x="492" y="1084">IO2</text>
+        <text class="tn" x="452" y="1084" text-anchor="end">SW-U4</text>
+        <rect class="padnc" x="468" y="1124" width="12" height="12"/>
+        <text class="t" x="492" y="1134">IO42</text>
+        <text class="tn" x="452" y="1134" text-anchor="end">BTN4</text>
+
+        <!-- ESP power wiring -->
+        <polyline class="w wgnd" points="468,390 460,390 460,2010"/>
+        <circle class="pad" cx="460" cy="2010" r="4.5"/>
+        <polyline class="w w33" points="468,440 430,440 430,150 960,150 960,1590"/>
+        <text class="tn" x="600" y="144" fill="var(--w33)">+3.3 V — all four U3 VCC</text>
+
+        <!-- right edge: I2C + bridge control -->
+        <rect class="pad" x="754" y="354" width="12" height="12"/>
+        <text class="t" x="748" y="364" text-anchor="end">IO9</text>
+        <rect class="pad" x="754" y="404" width="12" height="12"/>
+        <text class="t" x="748" y="414" text-anchor="end">IO8</text>
+        <rect class="pad" x="754" y="444" width="12" height="12"/>
+        <text class="t" x="748" y="454" text-anchor="end">IO4</text>
+        <rect class="pad" x="754" y="484" width="12" height="12"/>
+        <text class="t" x="748" y="494" text-anchor="end">IO5</text>
+        <rect class="pad" x="754" y="894" width="12" height="12"/>
+        <text class="t" x="748" y="904" text-anchor="end">IO6</text>
+        <rect class="pad" x="754" y="934" width="12" height="12"/>
+        <text class="t" x="748" y="944" text-anchor="end">IO7</text>
+        <rect class="pad" x="754" y="1344" width="12" height="12"/>
+        <text class="t" x="748" y="1354" text-anchor="end">IO15</text>
+        <rect class="pad" x="754" y="1384" width="12" height="12"/>
+        <text class="t" x="748" y="1394" text-anchor="end">IO16</text>
+        <rect class="pad" x="754" y="1794" width="12" height="12"/>
+        <text class="t" x="748" y="1804" text-anchor="end">IO17</text>
+        <rect class="pad" x="754" y="1834" width="12" height="12"/>
+        <text class="t" x="748" y="1844" text-anchor="end">IO18</text>
+        <rect class="padnc" x="754" y="1694" width="12" height="12"/>
+        <text class="t" x="748" y="1704" text-anchor="end">IO48 ◆</text>
+        <text class="tn" x="786" y="1704">on-board WS2812 (v1.1 boards: IO38)</text>
+
+        <!-- I2C bus: two trunks shared by all four INA219s -->
+        <polyline class="w wi2c" points="766,360 930,360"/>
+        <text class="tn" x="800" y="354" fill="var(--wi2c)">SCL — all four U3</text>
+        <polyline class="w wi2c" points="766,410 900,410"/>
+        <text class="tn" x="800" y="404" fill="var(--wi2c)">SDA</text>
+        <polyline class="w wi2c" points="900,270 900,1620"/>
+        <circle class="pad" cx="900" cy="410" r="4.5"/>
+        <polyline class="w wi2c" points="930,300 930,1650"/>
+        <circle class="pad" cx="930" cy="360" r="4.5"/>
+
+        <!-- bridge control: straight across, upper wire is always IN1 -->
+        <polyline class="w wctrl" points="766,450 1044,450"/>
+        <polyline class="w wctrl" points="766,490 1044,490"/>
+        <text class="tn" x="800" y="444" fill="var(--wctrl)">IN1 · unlock</text>
+        <text class="tn" x="800" y="484" fill="var(--wctrl)">IN2 · lock</text>
+        <polyline class="w wctrl" points="766,900 1044,900"/>
+        <polyline class="w wctrl" points="766,940 1044,940"/>
+        <polyline class="w wctrl" points="766,1350 1044,1350"/>
+        <polyline class="w wctrl" points="766,1390 1044,1390"/>
+        <polyline class="w wctrl" points="766,1800 1044,1800"/>
+        <polyline class="w wctrl" points="766,1840 1044,1840"/>
+
+        <!-- ============ DOOR 1 ============ -->
+        <g transform="translate(0,170)">
+          <text class="tt" x="1050" y="-8">DOOR 1</text>
+          <text class="ts" x="1170" y="-8">IN1 IO4 · IN2 IO5 · INA219 0x40</text>
+
+          <!-- branch taps -->
+          <circle class="pad" cx="990" cy="30" r="4.5"/>
+          <polyline class="w w12" points="990,30 1044,30"/>
+          <circle class="pad" cx="960" cy="70" r="4.5"/>
+          <polyline class="w w33" points="960,70 1044,70"/>
+          <circle class="pad" cx="900" cy="100" r="4.5"/>
+          <polyline class="w wi2c" points="900,100 1044,100"/>
+          <circle class="pad" cx="930" cy="130" r="4.5"/>
+          <polyline class="w wi2c" points="930,130 1044,130"/>
+
+          <!-- INA219 -->
+          <rect class="box" x="1050" y="0" width="230" height="150" rx="2"/>
+          <rect class="pad" x="1044" y="24" width="12" height="12"/>
+          <text class="t" x="1064" y="34">VIN+</text>
+          <rect class="pad" x="1044" y="64" width="12" height="12"/>
+          <text class="t" x="1064" y="74">VCC</text>
+          <rect class="pad" x="1044" y="94" width="12" height="12"/>
+          <text class="t" x="1064" y="104">SDA</text>
+          <rect class="pad" x="1044" y="124" width="12" height="12"/>
+          <text class="t" x="1064" y="134">SCL</text>
+          <rect class="pad" x="1274" y="24" width="12" height="12"/>
+          <text class="tn" x="1268" y="18" text-anchor="end">VIN−</text>
+          <text class="tt" x="1186" y="60" text-anchor="middle">U3a  INA219</text>
+          <text class="ts" x="1186" y="82" text-anchor="middle">addr 0x40 · 0.1 Ω shunt</text>
+          <text class="ts" x="1186" y="102" text-anchor="middle">A1 · A0: open · open</text>
+          <text class="ts" x="1186" y="122" text-anchor="middle">big VIN pads only</text>
+          <rect class="pad" x="1094" y="144" width="12" height="12"/>
+          <text class="tn" x="1114" y="144">GND</text>
+          <polyline class="w wgnd" points="1100,156 1100,170 1540,170"/>
+          <circle class="pad" cx="1540" cy="170" r="4.5"/>
+          <text class="tn" x="1360" y="164">own wire to star — every U3</text>
+          <!-- shunt output to bridge -->
+          <polyline class="w w12" points="1286,30 1330,30 1330,195 1165,195 1165,200"/>
+          <text class="tn" x="1342" y="120" fill="var(--w12)">VM</text>
+
+          <!-- DRV8871 -->
+          <rect class="box" x="1050" y="206" width="230" height="190" rx="2"/>
+          <rect class="pad" x="1159" y="200" width="12" height="12"/>
+          <text class="tn" x="1180" y="226">Power +</text>
+          <rect class="pad" x="1159" y="390" width="12" height="12"/>
+          <text class="tn" x="1180" y="382">Power −</text>
+          <rect class="pad" x="1044" y="274" width="12" height="12"/>
+          <text class="t" x="1064" y="284">IN1</text>
+          <rect class="pad" x="1044" y="314" width="12" height="12"/>
+          <text class="t" x="1064" y="324">IN2</text>
+          <rect class="pad" x="1274" y="244" width="12" height="12"/>
+          <text class="tn" x="1268" y="238" text-anchor="end">Motor +</text>
+          <rect class="pad" x="1274" y="324" width="12" height="12"/>
+          <text class="tn" x="1268" y="350" text-anchor="end">Motor −</text>
+          <text class="tt" x="1170" y="248" text-anchor="middle">U2a  DRV8871</text>
+          <text class="ts" x="1170" y="270" text-anchor="middle">6.5–45 V · 2 A cont.</text>
+          <text class="ts" x="1170" y="352" text-anchor="middle">00 coast · 10 unlock</text>
+          <text class="ts" x="1170" y="368" text-anchor="middle">01 lock · 11 brake (unused)</text>
+          <polyline class="w wgnd" points="1165,402 1165,425"/>
+          <polyline class="w wgnd" points="1016,425 1540,425"/>
+          <circle class="pad" cx="1165" cy="425" r="4.5"/>
+          <circle class="pad" cx="1540" cy="425" r="4.5"/>
+
+          <!-- IN pull-downs -->
+          <circle class="pad" cx="1036" cy="280" r="4"/>
+          <polyline class="w wgnd" points="1036,280 1036,340"/>
+          <rect class="comp" x="1028" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1036,368 1036,425"/>
+          <circle class="pad" cx="1036" cy="425" r="4"/>
+          <circle class="pad" cx="1016" cy="320" r="4"/>
+          <polyline class="w wgnd" points="1016,320 1016,340"/>
+          <rect class="comp" x="1008" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1016,368 1016,425"/>
+          <circle class="pad" cx="1016" cy="425" r="4"/>
+          <text class="tn" x="1026" y="447" text-anchor="middle">2 × 10 k</text>
+
+          <!-- motor -->
+          <polyline class="w wmot" points="1286,250 1384,250"/>
+          <polyline class="w wmot" points="1286,330 1384,330"/>
+          <circle class="pad" cx="1350" cy="250" r="4"/>
+          <polyline class="w wmot" points="1350,250 1350,282"/>
+          <line x1="1336" y1="284" x2="1364" y2="284" stroke="var(--ink)" stroke-width="2.2"/>
+          <line x1="1336" y1="294" x2="1364" y2="294" stroke="var(--ink)" stroke-width="2.2"/>
+          <polyline class="w wmot" points="1350,296 1350,330"/>
+          <circle class="pad" cx="1350" cy="330" r="4"/>
+          <text class="tn" x="1330" y="316" text-anchor="end">C3 100n</text>
+          <rect class="box" x="1390" y="210" width="120" height="160" rx="2"/>
+          <rect class="pad" x="1384" y="244" width="12" height="12"/>
+          <rect class="pad" x="1384" y="324" width="12" height="12"/>
+          <text class="tt" x="1450" y="240" text-anchor="middle">M1</text>
+          <circle cx="1450" cy="284" r="22" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+          <text class="tt" x="1450" y="292" text-anchor="middle">M</text>
+          <text class="ts" x="1450" y="352" text-anchor="middle">12 V actuator</text>
+        </g>
+
+        <!-- ============ DOOR 2 ============ -->
+        <g transform="translate(0,620)">
+          <text class="tt" x="1050" y="-8">DOOR 2</text>
+          <text class="ts" x="1170" y="-8">IN1 IO6 · IN2 IO7 · INA219 0x41</text>
+
+          <!-- branch taps -->
+          <circle class="pad" cx="990" cy="30" r="4.5"/>
+          <polyline class="w w12" points="990,30 1044,30"/>
+          <circle class="pad" cx="960" cy="70" r="4.5"/>
+          <polyline class="w w33" points="960,70 1044,70"/>
+          <circle class="pad" cx="900" cy="100" r="4.5"/>
+          <polyline class="w wi2c" points="900,100 1044,100"/>
+          <circle class="pad" cx="930" cy="130" r="4.5"/>
+          <polyline class="w wi2c" points="930,130 1044,130"/>
+
+          <!-- INA219 -->
+          <rect class="box" x="1050" y="0" width="230" height="150" rx="2"/>
+          <rect class="pad" x="1044" y="24" width="12" height="12"/>
+          <text class="t" x="1064" y="34">VIN+</text>
+          <rect class="pad" x="1044" y="64" width="12" height="12"/>
+          <text class="t" x="1064" y="74">VCC</text>
+          <rect class="pad" x="1044" y="94" width="12" height="12"/>
+          <text class="t" x="1064" y="104">SDA</text>
+          <rect class="pad" x="1044" y="124" width="12" height="12"/>
+          <text class="t" x="1064" y="134">SCL</text>
+          <rect class="pad" x="1274" y="24" width="12" height="12"/>
+          <text class="tn" x="1268" y="18" text-anchor="end">VIN−</text>
+          <text class="tt" x="1186" y="60" text-anchor="middle">U3b  INA219</text>
+          <text class="ts" x="1186" y="82" text-anchor="middle">addr 0x41 · 0.1 Ω shunt</text>
+          <text class="ts" x="1186" y="102" text-anchor="middle">A1 open · A0 bridged</text>
+          <text class="ts" x="1186" y="122" text-anchor="middle">big VIN pads only</text>
+          <rect class="pad" x="1094" y="144" width="12" height="12"/>
+          <text class="tn" x="1114" y="144">GND</text>
+          <polyline class="w wgnd" points="1100,156 1100,170 1540,170"/>
+          <circle class="pad" cx="1540" cy="170" r="4.5"/>
+
+          <!-- shunt output to bridge -->
+          <polyline class="w w12" points="1286,30 1330,30 1330,195 1165,195 1165,200"/>
+          <text class="tn" x="1342" y="120" fill="var(--w12)">VM</text>
+
+          <!-- DRV8871 -->
+          <rect class="box" x="1050" y="206" width="230" height="190" rx="2"/>
+          <rect class="pad" x="1159" y="200" width="12" height="12"/>
+          <text class="tn" x="1180" y="226">Power +</text>
+          <rect class="pad" x="1159" y="390" width="12" height="12"/>
+          <text class="tn" x="1180" y="382">Power −</text>
+          <rect class="pad" x="1044" y="274" width="12" height="12"/>
+          <text class="t" x="1064" y="284">IN1</text>
+          <rect class="pad" x="1044" y="314" width="12" height="12"/>
+          <text class="t" x="1064" y="324">IN2</text>
+          <rect class="pad" x="1274" y="244" width="12" height="12"/>
+          <text class="tn" x="1268" y="238" text-anchor="end">Motor +</text>
+          <rect class="pad" x="1274" y="324" width="12" height="12"/>
+          <text class="tn" x="1268" y="350" text-anchor="end">Motor −</text>
+          <text class="tt" x="1170" y="248" text-anchor="middle">U2b  DRV8871</text>
+          <text class="ts" x="1170" y="270" text-anchor="middle">6.5–45 V · 2 A cont.</text>
+
+          <polyline class="w wgnd" points="1165,402 1165,425"/>
+          <polyline class="w wgnd" points="1016,425 1540,425"/>
+          <circle class="pad" cx="1165" cy="425" r="4.5"/>
+          <circle class="pad" cx="1540" cy="425" r="4.5"/>
+
+          <!-- IN pull-downs -->
+          <circle class="pad" cx="1036" cy="280" r="4"/>
+          <polyline class="w wgnd" points="1036,280 1036,340"/>
+          <rect class="comp" x="1028" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1036,368 1036,425"/>
+          <circle class="pad" cx="1036" cy="425" r="4"/>
+          <circle class="pad" cx="1016" cy="320" r="4"/>
+          <polyline class="w wgnd" points="1016,320 1016,340"/>
+          <rect class="comp" x="1008" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1016,368 1016,425"/>
+          <circle class="pad" cx="1016" cy="425" r="4"/>
+          <text class="tn" x="1026" y="447" text-anchor="middle">2 × 10 k</text>
+
+          <!-- motor -->
+          <polyline class="w wmot" points="1286,250 1384,250"/>
+          <polyline class="w wmot" points="1286,330 1384,330"/>
+          <circle class="pad" cx="1350" cy="250" r="4"/>
+          <polyline class="w wmot" points="1350,250 1350,282"/>
+          <line x1="1336" y1="284" x2="1364" y2="284" stroke="var(--ink)" stroke-width="2.2"/>
+          <line x1="1336" y1="294" x2="1364" y2="294" stroke="var(--ink)" stroke-width="2.2"/>
+          <polyline class="w wmot" points="1350,296 1350,330"/>
+          <circle class="pad" cx="1350" cy="330" r="4"/>
+          <text class="tn" x="1330" y="316" text-anchor="end">C3 100n</text>
+          <rect class="box" x="1390" y="210" width="120" height="160" rx="2"/>
+          <rect class="pad" x="1384" y="244" width="12" height="12"/>
+          <rect class="pad" x="1384" y="324" width="12" height="12"/>
+          <text class="tt" x="1450" y="240" text-anchor="middle">M2</text>
+          <circle cx="1450" cy="284" r="22" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+          <text class="tt" x="1450" y="292" text-anchor="middle">M</text>
+          <text class="ts" x="1450" y="352" text-anchor="middle">12 V actuator</text>
+        </g>
+
+        <!-- ============ DOOR 3 ============ -->
+        <g transform="translate(0,1070)">
+          <text class="tt" x="1050" y="-8">DOOR 3</text>
+          <text class="ts" x="1170" y="-8">IN1 IO15 · IN2 IO16 · INA219 0x44</text>
+
+          <!-- branch taps -->
+          <circle class="pad" cx="990" cy="30" r="4.5"/>
+          <polyline class="w w12" points="990,30 1044,30"/>
+          <circle class="pad" cx="960" cy="70" r="4.5"/>
+          <polyline class="w w33" points="960,70 1044,70"/>
+          <circle class="pad" cx="900" cy="100" r="4.5"/>
+          <polyline class="w wi2c" points="900,100 1044,100"/>
+          <circle class="pad" cx="930" cy="130" r="4.5"/>
+          <polyline class="w wi2c" points="930,130 1044,130"/>
+
+          <!-- INA219 -->
+          <rect class="box" x="1050" y="0" width="230" height="150" rx="2"/>
+          <rect class="pad" x="1044" y="24" width="12" height="12"/>
+          <text class="t" x="1064" y="34">VIN+</text>
+          <rect class="pad" x="1044" y="64" width="12" height="12"/>
+          <text class="t" x="1064" y="74">VCC</text>
+          <rect class="pad" x="1044" y="94" width="12" height="12"/>
+          <text class="t" x="1064" y="104">SDA</text>
+          <rect class="pad" x="1044" y="124" width="12" height="12"/>
+          <text class="t" x="1064" y="134">SCL</text>
+          <rect class="pad" x="1274" y="24" width="12" height="12"/>
+          <text class="tn" x="1268" y="18" text-anchor="end">VIN−</text>
+          <text class="tt" x="1186" y="60" text-anchor="middle">U3c  INA219</text>
+          <text class="ts" x="1186" y="82" text-anchor="middle">addr 0x44 · 0.1 Ω shunt</text>
+          <text class="ts" x="1186" y="102" text-anchor="middle">A1 bridged · A0 open</text>
+          <text class="ts" x="1186" y="122" text-anchor="middle">big VIN pads only</text>
+          <rect class="pad" x="1094" y="144" width="12" height="12"/>
+          <text class="tn" x="1114" y="144">GND</text>
+          <polyline class="w wgnd" points="1100,156 1100,170 1540,170"/>
+          <circle class="pad" cx="1540" cy="170" r="4.5"/>
+
+          <!-- shunt output to bridge -->
+          <polyline class="w w12" points="1286,30 1330,30 1330,195 1165,195 1165,200"/>
+          <text class="tn" x="1342" y="120" fill="var(--w12)">VM</text>
+
+          <!-- DRV8871 -->
+          <rect class="box" x="1050" y="206" width="230" height="190" rx="2"/>
+          <rect class="pad" x="1159" y="200" width="12" height="12"/>
+          <text class="tn" x="1180" y="226">Power +</text>
+          <rect class="pad" x="1159" y="390" width="12" height="12"/>
+          <text class="tn" x="1180" y="382">Power −</text>
+          <rect class="pad" x="1044" y="274" width="12" height="12"/>
+          <text class="t" x="1064" y="284">IN1</text>
+          <rect class="pad" x="1044" y="314" width="12" height="12"/>
+          <text class="t" x="1064" y="324">IN2</text>
+          <rect class="pad" x="1274" y="244" width="12" height="12"/>
+          <text class="tn" x="1268" y="238" text-anchor="end">Motor +</text>
+          <rect class="pad" x="1274" y="324" width="12" height="12"/>
+          <text class="tn" x="1268" y="350" text-anchor="end">Motor −</text>
+          <text class="tt" x="1170" y="248" text-anchor="middle">U2c  DRV8871</text>
+          <text class="ts" x="1170" y="270" text-anchor="middle">6.5–45 V · 2 A cont.</text>
+
+          <polyline class="w wgnd" points="1165,402 1165,425"/>
+          <polyline class="w wgnd" points="1016,425 1540,425"/>
+          <circle class="pad" cx="1165" cy="425" r="4.5"/>
+          <circle class="pad" cx="1540" cy="425" r="4.5"/>
+
+          <!-- IN pull-downs -->
+          <circle class="pad" cx="1036" cy="280" r="4"/>
+          <polyline class="w wgnd" points="1036,280 1036,340"/>
+          <rect class="comp" x="1028" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1036,368 1036,425"/>
+          <circle class="pad" cx="1036" cy="425" r="4"/>
+          <circle class="pad" cx="1016" cy="320" r="4"/>
+          <polyline class="w wgnd" points="1016,320 1016,340"/>
+          <rect class="comp" x="1008" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1016,368 1016,425"/>
+          <circle class="pad" cx="1016" cy="425" r="4"/>
+          <text class="tn" x="1026" y="447" text-anchor="middle">2 × 10 k</text>
+
+          <!-- motor -->
+          <polyline class="w wmot" points="1286,250 1384,250"/>
+          <polyline class="w wmot" points="1286,330 1384,330"/>
+          <circle class="pad" cx="1350" cy="250" r="4"/>
+          <polyline class="w wmot" points="1350,250 1350,282"/>
+          <line x1="1336" y1="284" x2="1364" y2="284" stroke="var(--ink)" stroke-width="2.2"/>
+          <line x1="1336" y1="294" x2="1364" y2="294" stroke="var(--ink)" stroke-width="2.2"/>
+          <polyline class="w wmot" points="1350,296 1350,330"/>
+          <circle class="pad" cx="1350" cy="330" r="4"/>
+          <text class="tn" x="1330" y="316" text-anchor="end">C3 100n</text>
+          <rect class="box" x="1390" y="210" width="120" height="160" rx="2"/>
+          <rect class="pad" x="1384" y="244" width="12" height="12"/>
+          <rect class="pad" x="1384" y="324" width="12" height="12"/>
+          <text class="tt" x="1450" y="240" text-anchor="middle">M3</text>
+          <circle cx="1450" cy="284" r="22" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+          <text class="tt" x="1450" y="292" text-anchor="middle">M</text>
+          <text class="ts" x="1450" y="352" text-anchor="middle">12 V actuator</text>
+        </g>
+
+        <!-- ============ DOOR 4 ============ -->
+        <g transform="translate(0,1520)">
+          <text class="tt" x="1050" y="-8">DOOR 4</text>
+          <text class="ts" x="1170" y="-8">IN1 IO17 · IN2 IO18 · INA219 0x45</text>
+
+          <!-- branch taps -->
+          <circle class="pad" cx="990" cy="30" r="4.5"/>
+          <polyline class="w w12" points="990,30 1044,30"/>
+          <circle class="pad" cx="960" cy="70" r="4.5"/>
+          <polyline class="w w33" points="960,70 1044,70"/>
+          <circle class="pad" cx="900" cy="100" r="4.5"/>
+          <polyline class="w wi2c" points="900,100 1044,100"/>
+          <circle class="pad" cx="930" cy="130" r="4.5"/>
+          <polyline class="w wi2c" points="930,130 1044,130"/>
+
+          <!-- INA219 -->
+          <rect class="box" x="1050" y="0" width="230" height="150" rx="2"/>
+          <rect class="pad" x="1044" y="24" width="12" height="12"/>
+          <text class="t" x="1064" y="34">VIN+</text>
+          <rect class="pad" x="1044" y="64" width="12" height="12"/>
+          <text class="t" x="1064" y="74">VCC</text>
+          <rect class="pad" x="1044" y="94" width="12" height="12"/>
+          <text class="t" x="1064" y="104">SDA</text>
+          <rect class="pad" x="1044" y="124" width="12" height="12"/>
+          <text class="t" x="1064" y="134">SCL</text>
+          <rect class="pad" x="1274" y="24" width="12" height="12"/>
+          <text class="tn" x="1268" y="18" text-anchor="end">VIN−</text>
+          <text class="tt" x="1186" y="60" text-anchor="middle">U3d  INA219</text>
+          <text class="ts" x="1186" y="82" text-anchor="middle">addr 0x45 · 0.1 Ω shunt</text>
+          <text class="ts" x="1186" y="102" text-anchor="middle">A1 + A0 both bridged</text>
+          <text class="ts" x="1186" y="122" text-anchor="middle">big VIN pads only</text>
+          <rect class="pad" x="1094" y="144" width="12" height="12"/>
+          <text class="tn" x="1114" y="144">GND</text>
+          <polyline class="w wgnd" points="1100,156 1100,170 1540,170"/>
+          <circle class="pad" cx="1540" cy="170" r="4.5"/>
+
+          <!-- shunt output to bridge -->
+          <polyline class="w w12" points="1286,30 1330,30 1330,195 1165,195 1165,200"/>
+          <text class="tn" x="1342" y="120" fill="var(--w12)">VM</text>
+
+          <!-- DRV8871 -->
+          <rect class="box" x="1050" y="206" width="230" height="190" rx="2"/>
+          <rect class="pad" x="1159" y="200" width="12" height="12"/>
+          <text class="tn" x="1180" y="226">Power +</text>
+          <rect class="pad" x="1159" y="390" width="12" height="12"/>
+          <text class="tn" x="1180" y="382">Power −</text>
+          <rect class="pad" x="1044" y="274" width="12" height="12"/>
+          <text class="t" x="1064" y="284">IN1</text>
+          <rect class="pad" x="1044" y="314" width="12" height="12"/>
+          <text class="t" x="1064" y="324">IN2</text>
+          <rect class="pad" x="1274" y="244" width="12" height="12"/>
+          <text class="tn" x="1268" y="238" text-anchor="end">Motor +</text>
+          <rect class="pad" x="1274" y="324" width="12" height="12"/>
+          <text class="tn" x="1268" y="350" text-anchor="end">Motor −</text>
+          <text class="tt" x="1170" y="248" text-anchor="middle">U2d  DRV8871</text>
+          <text class="ts" x="1170" y="270" text-anchor="middle">6.5–45 V · 2 A cont.</text>
+
+          <polyline class="w wgnd" points="1165,402 1165,425"/>
+          <polyline class="w wgnd" points="1016,425 1540,425"/>
+          <circle class="pad" cx="1165" cy="425" r="4.5"/>
+          <circle class="pad" cx="1540" cy="425" r="4.5"/>
+
+          <!-- IN pull-downs -->
+          <circle class="pad" cx="1036" cy="280" r="4"/>
+          <polyline class="w wgnd" points="1036,280 1036,340"/>
+          <rect class="comp" x="1028" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1036,368 1036,425"/>
+          <circle class="pad" cx="1036" cy="425" r="4"/>
+          <circle class="pad" cx="1016" cy="320" r="4"/>
+          <polyline class="w wgnd" points="1016,320 1016,340"/>
+          <rect class="comp" x="1008" y="340" width="16" height="28" rx="1"/>
+          <polyline class="w wgnd" points="1016,368 1016,425"/>
+          <circle class="pad" cx="1016" cy="425" r="4"/>
+          <text class="tn" x="1026" y="447" text-anchor="middle">2 × 10 k</text>
+
+          <!-- motor -->
+          <polyline class="w wmot" points="1286,250 1384,250"/>
+          <polyline class="w wmot" points="1286,330 1384,330"/>
+          <circle class="pad" cx="1350" cy="250" r="4"/>
+          <polyline class="w wmot" points="1350,250 1350,282"/>
+          <line x1="1336" y1="284" x2="1364" y2="284" stroke="var(--ink)" stroke-width="2.2"/>
+          <line x1="1336" y1="294" x2="1364" y2="294" stroke="var(--ink)" stroke-width="2.2"/>
+          <polyline class="w wmot" points="1350,296 1350,330"/>
+          <circle class="pad" cx="1350" cy="330" r="4"/>
+          <text class="tn" x="1330" y="316" text-anchor="end">C3 100n</text>
+          <rect class="box" x="1390" y="210" width="120" height="160" rx="2"/>
+          <rect class="pad" x="1384" y="244" width="12" height="12"/>
+          <rect class="pad" x="1384" y="324" width="12" height="12"/>
+          <text class="tt" x="1450" y="240" text-anchor="middle">M4</text>
+          <circle cx="1450" cy="284" r="22" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+          <text class="tt" x="1450" y="292" text-anchor="middle">M</text>
+          <text class="ts" x="1450" y="352" text-anchor="middle">12 V actuator</text>
+        </g>
+
+</svg>

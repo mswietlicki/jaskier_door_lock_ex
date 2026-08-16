@@ -1,5 +1,6 @@
 # =============================================================================
-#  jaskier_door_lock  —  12 V linear-actuator door lock
+#  jaskier_door_lock — variant A — single 12 V linear-actuator door lock
+#  (variant B, four doors on one board, lives in door_lock_b.yaml)
 # -----------------------------------------------------------------------------
 #  U1  ESP32-C3-Zero (Waveshare)      logic + Home Assistant API
 #  U2  DRV8871 breakout (Adafruit)    H-bridge, 6.5-45 V / 2 A cont.

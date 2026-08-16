@@ -1,9 +1,19 @@
 # 12 V Linear-Actuator Door Lock
 
-ESPHome door lock for Home Assistant: an **ESP32-C3-Zero** drives a **DRV8871** H-bridge
-into a 12 V linear actuator, with an **INA219** high-side shunt reading motor current.
+ESPHome door lock for Home Assistant: an ESP32 drives a **DRV8871** H-bridge into a
+12 V linear actuator, with an **INA219** high-side shunt reading motor current.
 End of travel *and* obstructions are both detected from that current — no extra sensors.
 Powered from a 4S LiFePO₄ pack via an **MH-MINI-360** buck.
+
+Two variants share the same per-door state machine:
+
+| Variant | Config | ESP | Doors |
+|---|---|---|---|
+| **A** | `door_lock_a.yaml` | ESP32-C3-Zero (Waveshare) | 1 |
+| **B** | `door_lock_b.yaml` | ESP32-S3-DevKitC-1 | 4, fully independent, one board |
+
+Everything below describes variant A; [Variant B](#variant-b--four-doors-one-board)
+documents only what differs (pins, addresses, BOM, power).
 
 | | |
 |---|---|
@@ -17,13 +27,17 @@ Powered from a 4S LiFePO₄ pack via an **MH-MINI-360** buck.
 ## Repository layout
 
 ```
-door_lock.yaml               ESPHome configuration - the whole firmware
+door_lock_a.yaml             variant A - single door on an ESP32-C3-Zero
+door_lock_b.yaml             variant B - four doors on an ESP32-S3-DevKitC-1
+packages/door.yaml           one door's state machine, included 4x by variant B
 secrets.yaml.example         copy to secrets.yaml and fill in
-docs/wiring.html             full illustrated build document (open in a browser)
+docs/wiring.html             full illustrated build document for variant A
+docs/wiring_b.html           full illustrated build document for variant B
 docs/diagrams/
-  fig1-wiring.svg            complete wiring diagram, all pinouts
+  fig1-wiring.svg            complete wiring diagram, all pinouts (variant A)
   fig2-position-switches.svg optional position feedback
   fig3-move-outcomes.svg     how a move terminates
+  figB1-wiring.svg           complete wiring diagram, four doors (variant B)
 ```
 
 ---
@@ -281,16 +295,16 @@ Fill in `secrets.yaml`, generating the API key with:
 openssl rand -base64 32
 ```
 
-Then, with U1 on USB-C:
+Then, with U1 on USB-C (use `door_lock_b.yaml` for variant B):
 
 ```bash
-esphome run door_lock.yaml
+esphome run door_lock_a.yaml
 ```
 
 Subsequent updates go over the air. Logs are available with:
 
 ```bash
-esphome logs door_lock.yaml
+esphome logs door_lock_a.yaml
 ```
 
 ## Commissioning
@@ -398,9 +412,124 @@ automation:
 
 ---
 
+## Variant B — four doors, one board
+
+`door_lock_b.yaml` runs **four fully independent doors** from one ESP and one perfboard.
+Each door is a verbatim copy of the variant A state machine (factored out into
+`packages/door.yaml` and included four times), so everything above — move outcomes,
+thresholds, jam handling, commissioning — applies per door. Doors never wait on each
+other; any or all four can move at once. A "close all" in Home Assistant is simply a
+script/automation that calls `lock.lock` on all four entities.
+
+The full illustrated build document for this variant — wiring diagram, net list,
+complete DevKitC-1 pinout, BOM, commissioning — is **[docs/wiring_b.html](docs/wiring_b.html)**
+(open in a browser).
+
+![Variant B complete wiring diagram](docs/diagrams/figB1-wiring.svg)
+
+### What changes against variant A
+
+| | Variant A | Variant B |
+|---|---|---|
+| ESP | ESP32-C3-Zero | **ESP32-S3-DevKitC-1** — the C3 has ~11 usable GPIOs, four doors need ~23 |
+| H-bridge | 1 × DRV8871 | 4 × DRV8871, one per door |
+| Current sense | 1 × INA219 @ 0x40 | 4 × INA219 on the **same I²C bus** @ 0x40 / 0x41 / 0x44 / 0x45 |
+| Pull-downs | R1, R2 | 10 k on **all eight** IN pins (R1–R8) |
+| Fuse F1 | 2 A slow-blow | **5 A slow-blow** — four actuators stalling together draw ~2 A plus inrush |
+| Supply voltage entity | from the INA219 | from door 1's INA219 only (all four sit on the same rail) |
+| Status LED | per-move | aggregate: red = any fault · white = any door moving · green flash = a move finished |
+
+Each door keeps its own 12 V branch: rail → its INA219 shunt → its DRV8871 → its motor,
+exactly as in Figure 1, replicated four times off the shared +12 V and GND rails. All the
+variant A layout rules still hold — star grounds (each INA219 and each bridge return runs
+its own wire to the star), tight motor loops, C1/C2 at *every* bridge's power terminals,
+I²C away from motor wiring.
+
+### INA219 addressing
+
+Solder jumpers on each module set the address:
+
+| Door | A1 | A0 | Address |
+|---|---|---|---|
+| 1 | open | open | 0x40 |
+| 2 | open | bridged | 0x41 |
+| 3 | bridged | open | 0x44 |
+| 4 | bridged | bridged | 0x45 |
+
+Confirm with the boot log: the I²C scan must find all four addresses. Four modules also
+mean four sets of 10 k bus pull-ups in parallel (≈ 2.5 k effective) — that is fine at
+400 kHz; do not add the extra 4.7 k resistors from the variant A notes.
+
+### Pin map (ESP32-S3-DevKitC-1)
+
+| Door | IN1 (unlock) | IN2 (lock) | SW locked | SW unlocked | Button | INA219 |
+|---|---|---|---|---|---|---|
+| 1 | GPIO4 | GPIO5 | GPIO10 | GPIO11 | GPIO39 | 0x40 |
+| 2 | GPIO6 | GPIO7 | GPIO12 | GPIO13 | GPIO40 | 0x41 |
+| 3 | GPIO15 | GPIO16 | GPIO14 | GPIO21 | GPIO41 | 0x44 |
+| 4 | GPIO17 | GPIO18 | GPIO1 | GPIO2 | GPIO42 | 0x45 |
+
+Shared: **GPIO8** SDA · **GPIO9** SCL · **GPIO48** on-board WS2812 (older DevKitC-1
+revisions route the LED to GPIO38 — change `pin_rgb` if yours does).
+
+Avoided on purpose: GPIO0 / 3 / 45 / 46 (strapping), GPIO19 / 20 (USB),
+GPIO43 / 44 (UART0), GPIO35 – 37 (used by octal-PSRAM boards). Position switches and
+buttons are optional exactly as in variant A — unfitted pins float high on the internal
+pull-up and read inactive.
+
+### BOM delta
+
+Quantities against the variant A BOM: U2 ×4, U3 ×4 (with address jumpers set), M1 ×4,
+R1–R8 (eight 10 k pull-downs), C1/C2 ×4 (at each bridge), C3 ×4 (at each motor),
+F1 becomes 5 A. U1 becomes an ESP32-S3-DevKitC-1 (any flash size; N8R2 is plenty).
+One MH-MINI-360 still powers everything — the ESP plus four INA219s draw well under
+its 1.8 A.
+
+### Commissioning
+
+Run the variant A commissioning sequence **once per door** — each door has its own six
+threshold entities, jog buttons, and *use position switches* toggle, all prefixed
+"Door 1…4" in Home Assistant. Doors with different actuators, strokes, or friction get
+different thresholds; that is the point of keeping the config per door.
+
+The fault event carries a `door` field, so one automation covers all four:
+
+```yaml
+automation:
+  - alias: Any door lock fault
+    trigger:
+      - platform: event
+        event_type: esphome.door_lock_fault
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "{{ trigger.event.data.door }}: {{ trigger.event.data.reason }}"
+          message: >-
+            While {{ trigger.event.data.direction }} —
+            {{ trigger.event.data.peak_current }} A after
+            {{ trigger.event.data.travel_ms }} ms
+```
+
+And "close all" is one service call:
+
+```yaml
+script:
+  close_all_doors:
+    sequence:
+      - service: lock.lock
+        target:
+          entity_id:
+            - lock.door_locks_door_1
+            - lock.door_locks_door_2
+            - lock.door_locks_door_3
+            - lock.door_locks_door_4
+```
+
+---
+
 ## Firmware notes
 
-Decisions in `door_lock.yaml` that are easy to undo by accident:
+Decisions in `door_lock_a.yaml` / `packages/door.yaml` that are easy to undo by accident:
 
 - **No PWM on the bridge.** `output: gpio`, not `ledc`. Switching to PWM chops the current
   the shunt sees and breaks every threshold above.
