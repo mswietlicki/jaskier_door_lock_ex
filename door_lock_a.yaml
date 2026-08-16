@@ -72,8 +72,11 @@ esphome:
         - script.stop: energize
         - script.stop: jog_unlock
         - script.stop: jog_lock
-        - script.execute: coast
-        - script.wait: coast
+        # Shutdown automations must not wait on scheduled scripts: drive both
+        # bridge inputs low synchronously so reboot cannot be held up.
+        - output.turn_off: drv_in1
+        - output.turn_off: drv_in2
+        - lambda: 'id(mv_energized) = false;'
 
 esp32:
   board: esp32-c3-devkitm-1

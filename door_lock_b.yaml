@@ -99,14 +99,21 @@ esphome:
         - script.stop: d2_jog_lock
         - script.stop: d3_jog_lock
         - script.stop: d4_jog_lock
-        - script.execute: d1_coast
-        - script.execute: d2_coast
-        - script.execute: d3_coast
-        - script.execute: d4_coast
-        - script.wait: d1_coast
-        - script.wait: d2_coast
-        - script.wait: d3_coast
-        - script.wait: d4_coast
+        # Shutdown automations must not wait on scheduled scripts: drive every
+        # bridge input low synchronously so reboot cannot be held up.
+        - output.turn_off: d1_drv_in1
+        - output.turn_off: d1_drv_in2
+        - output.turn_off: d2_drv_in1
+        - output.turn_off: d2_drv_in2
+        - output.turn_off: d3_drv_in1
+        - output.turn_off: d3_drv_in2
+        - output.turn_off: d4_drv_in1
+        - output.turn_off: d4_drv_in2
+        - lambda: |-
+            id(d1_mv_energized) = false;
+            id(d2_mv_energized) = false;
+            id(d3_mv_energized) = false;
+            id(d4_mv_energized) = false;
 
 esp32:
   board: esp32-s3-devkitc-1
