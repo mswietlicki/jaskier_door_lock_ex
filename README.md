@@ -19,7 +19,7 @@ documents only what differs (pins, addresses, BOM, power).
 |---|---|
 | Pack | 4S LiFePO₄ · 12.8 V nominal · 10.0 – 14.6 V |
 | Measured stall current | ≈ 0.50 A |
-| Default thresholds | 0.40 A stall / 0.60 A hard limit / 0.04 A idle |
+| Default thresholds | 0.40 A stall / 0.60 A hard limit / 0.01 A idle |
 | Shunt | 0.1 Ω · 0.8 mA resolution |
 | I²C | GPIO8 (SDA) / GPIO9 (SCL) · address 0x40 |
 | Bridge | GPIO6 (IN1) / GPIO7 (IN2) · full on/off, **no PWM** |
@@ -254,8 +254,10 @@ threshold before it commits — one noisy reading never triggers anything.
 4. **Neither threshold reached by `max travel time`** → slipping clutch, broken linkage,
    bad wiring → `JAMMED` + alert.
 
-A fifth path isn't drawn: current above `hard current limit` aborts on the very first
-sample, with no debounce at all.
+A fifth path isn't drawn: after inrush blanking, current above `hard current limit`
+aborts on the very first sample, with no debounce. Three consecutive invalid INA219
+samples abort without back-off and latch a current-sensor fault; an invalid reading is
+never treated as an open actuator limit switch.
 
 **The only thing separating ② from ③ is the clock.** A stall after `min travel time` is
 the bolt arriving; the same stall before it is an obstruction. That is why `min travel
@@ -339,12 +341,12 @@ matters is that the free-running current sits clearly between `idle current` and
 
 | Entity | Default | How to pick it |
 |---|---|---|
-| Idle current | 0.04 A | Well below free-running, above the standing draw with the motor stopped. Three samples under this = limit switch opened. |
+| Idle current | 0.01 A | Well below the commissioned 0.04–0.06 A free-running current, above the ≈0.003 A standing reading. Three samples under this = limit switch opened. |
 | Stall current | 0.40 A | Roughly midway between free-running and the 0.5 A stall. Raise it if normal moves trip a false jam. |
-| Hard current limit | 0.60 A | Just above stall. Trips on a single sample, no debounce — the fast path for a hard mechanical block. |
+| Hard current limit | 0.60 A | Just above stall. After inrush blanking it trips on a single sample, with no debounce. |
 | Inrush blanking | 400 ms | Long enough to cover the startup spike. Shorten only if the logs show the spike is over sooner. |
 | Min travel time | 1500 ms | ≈ 70 % of the measured full stroke. Below this, a stall means an obstruction. |
-| Max travel time | 9000 ms | ≈ 150 % of the measured full stroke. Reaching it is a timeout fault. |
+| Max travel time | 4500 ms | Commissioned 1.7–2.8 s stroke plus cold-weather margin. Reaching it is a timeout fault. |
 
 > [!IMPORTANT]
 > **If free-running current is close to stall current.** A 0.5 A stall is low, which means
@@ -368,7 +370,7 @@ matters is that the free-running current sits clearly between `idle current` and
 | Last result | `text_sensor` | Plain text: `locked`, `obstruction - stalled mid-travel`, and so on. |
 | Stop | `button` | Aborts a move immediately, state goes unknown. |
 | Clear fault | `button` | Drops the fault flag and the red LED. |
-| Jog unlock / Jog lock | `button` | 400 ms bench nudge, no protection logic. |
+| Jog unlock / Jog lock | `button` | 400 ms bench nudge, no protection logic. Disabled by default; enable only while commissioning. |
 | Use position switches | `switch` | Off by default. Turn on once SW1/SW2 exist. |
 | Six thresholds | `number` | Config category. Stored in flash. |
 

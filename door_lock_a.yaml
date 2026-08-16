@@ -38,16 +38,19 @@ substitutions:
   # ---- defaults for the tunable thresholds --------------------------------
   # Measured stall current of this actuator was ~0.50 A.
   default_stall_a: "0.40"        # A  - treat as mechanical hard stop
-  default_hard_a: "0.60"         # A  - immediate abort, no debounce
-  default_idle_a: "0.04"         # A  - internal limit switch has opened
+  default_hard_a: "0.60"         # A  - post-inrush single-sample abort
+  default_idle_a: "0.01"         # A  - internal limit switch has opened
   default_blank_ms: "400"        # ms - ignore inrush after energising
   default_min_travel_ms: "1500"  # ms - stall before this = jam, not end stop
-  default_max_travel_ms: "9000"  # ms - full stroke + margin
+  default_max_travel_ms: "4500"  # ms - commissioned full stroke + cold-weather margin
 
 esphome:
   name: ${device_name}
   friendly_name: ${friendly}
   min_version: 2024.6.0
+  project:
+    name: mswietlicki.jaskier_door_lock_a
+    version: "1.1.0"
   on_boot:
     # Belt-and-braces: the 10 k pull-downs R1/R2 hold the bridge off during
     # reset; this makes sure firmware agrees as soon as the outputs exist.
@@ -58,6 +61,19 @@ esphome:
             id(fault_reason) = "boot";
             id(mv_running) = false;
         - script.execute: publish_lock_state
+  on_shutdown:
+    # Stop every script that can energise the bridge before GPIO teardown.
+    - priority: 700
+      then:
+        - script.stop: cmd
+        - script.stop: move_actuator
+        - script.stop: finish_fault
+        - script.stop: finish_ok
+        - script.stop: energize
+        - script.stop: jog_unlock
+        - script.stop: jog_lock
+        - script.execute: coast
+        - script.wait: coast
 
 esp32:
   board: esp32-c3-devkitm-1
@@ -124,7 +140,7 @@ globals:
     type: uint32_t
     restore_value: false
     initial_value: '0'
-  # 0 running | 1 reached end of travel | 2 jam | 3 timeout
+  # 0 running | 1 reached end of travel | 2 jam | 3 timeout | 4 current sensor fault
   - id: mv_outcome
     type: int
     restore_value: false
@@ -134,6 +150,10 @@ globals:
     restore_value: false
     initial_value: '0'
   - id: mv_stall_hits
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: mv_invalid_hits
     type: int
     restore_value: false
     initial_value: '0'
@@ -190,14 +210,29 @@ sensor:
             if (!id(mv_running)) return;
 
             const uint32_t el = millis() - id(mv_start_ms);
-            const float i = isnan(x) ? 0.0f : x;
 
-            // Inrush window: log the peak but do not judge yet.
-            if (el < (uint32_t) id(cfg_blank_ms).state) return;
+            // Never interpret a failed current reading as an open internal
+            // limit switch. Three bad samples are a latched sensor fault.
+            if (!std::isfinite(x)) {
+              id(mv_invalid_hits)++;
+              id(mv_idle_hits) = 0;
+              id(mv_stall_hits) = 0;
+              if (id(mv_invalid_hits) >= 3) {
+                id(mv_outcome) = 4;
+                id(mv_running) = false;
+              }
+              return;
+            }
+            id(mv_invalid_hits) = 0;
+            const float i = x;
 
+            // Capture the true peak, including inrush, for commissioning.
             if (i > id(mv_peak_a)) id(mv_peak_a) = i;
 
-            // Hard over-current: abort immediately, no debounce.
+            // Ignore decision thresholds during the configured inrush window.
+            if (el < (uint32_t) id(cfg_blank_ms).state) return;
+
+            // Post-inrush hard over-current: abort on the first sample.
             if (i > id(cfg_hard_a).state) {
               id(mv_outcome) = 2;
               id(mv_running) = false;
@@ -365,6 +400,7 @@ binary_sensor:
     id: sw_locked
     name: "${friendly} bolt locked switch"
     entity_category: diagnostic
+    disabled_by_default: true
     pin:
       number: ${pin_sw_locked}
       mode:
@@ -388,6 +424,7 @@ binary_sensor:
     id: sw_unlocked
     name: "${friendly} bolt unlocked switch"
     entity_category: diagnostic
+    disabled_by_default: true
     pin:
       number: ${pin_sw_unlocked}
       mode:
@@ -472,8 +509,15 @@ button:
     id: btn_stop
     entity_category: config
     on_press:
+      - script.stop: cmd
       - script.stop: move_actuator
+      - script.stop: finish_fault
+      - script.stop: finish_ok
+      - script.stop: energize
+      - script.stop: jog_unlock
+      - script.stop: jog_lock
       - script.execute: coast
+      - script.wait: coast
       - lambda: |-
           id(mv_running) = false;
           id(fault_reason) = "stopped by user";
@@ -501,11 +545,13 @@ button:
   - platform: template
     name: "${friendly} jog unlock"
     entity_category: config
+    disabled_by_default: true
     on_press:
       - script.execute: jog_unlock
   - platform: template
     name: "${friendly} jog lock"
     entity_category: config
+    disabled_by_default: true
     on_press:
       - script.execute: jog_lock
 
@@ -522,7 +568,8 @@ script:
       - lambda: 'id(mv_energized) = false;'
 
   - id: energize
-    mode: single
+    # A new direction request must cancel a pending 5 ms dead-time action.
+    mode: restart
     parameters:
       unlock: bool
     then:
@@ -561,7 +608,13 @@ script:
       unlock: bool
     then:
       - script.stop: move_actuator
+      - script.stop: finish_fault
+      - script.stop: finish_ok
+      - script.stop: energize
+      - script.stop: jog_unlock
+      - script.stop: jog_lock
       - script.execute: coast
+      - script.wait: coast
       - lambda: 'id(mv_running) = false;'
       - delay: 200ms
       - script.execute:
@@ -595,6 +648,7 @@ script:
                 id(mv_outcome)    = 0;
                 id(mv_idle_hits)  = 0;
                 id(mv_stall_hits) = 0;
+                id(mv_invalid_hits) = 0;
                 id(mv_peak_a)     = 0.0f;
                 id(lock_state)    = unlock ? 5 : 4;
             - script.execute: publish_lock_state
@@ -607,6 +661,7 @@ script:
             - script.execute:
                 id: energize
                 unlock: !lambda 'return unlock;'
+            - script.wait: energize
 
             # Wait for the current monitor to reach a verdict.
             - while:
@@ -616,6 +671,7 @@ script:
                   - delay: 20ms
 
             - script.execute: coast
+            - script.wait: coast
             - lambda: 'id(mv_travel_ms) = millis() - id(mv_start_ms);'
             - sensor.template.publish:
                 id: peak_current_reported
@@ -629,8 +685,10 @@ script:
                   lambda: 'return id(mv_outcome) == 1;'
                 then:
                   - script.execute: finish_ok
+                  - script.wait: finish_ok
                 else:
                   - script.execute: finish_fault
+                  - script.wait: finish_fault
 
   - id: finish_ok
     mode: single
@@ -660,24 +718,40 @@ script:
     mode: single
     then:
       - lambda: |-
-          id(fault_reason) = (id(mv_outcome) == 3)
-              ? "timeout - no end of travel detected"
-              : "obstruction - stalled mid-travel";
-          uint32_t b = id(mv_travel_ms) + 250;
-          if (b > 4000) b = 4000;
-          id(mv_backoff_ms) = b;
+          if (id(mv_outcome) == 3) {
+            id(fault_reason) = "timeout - no end of travel detected";
+          } else if (id(mv_outcome) == 4) {
+            id(fault_reason) = "current sensor unavailable";
+          } else {
+            id(fault_reason) = "obstruction - stalled mid-travel";
+          }
+          if (id(mv_outcome) != 4) {
+            uint32_t b = id(mv_travel_ms) + 250;
+            if (b > 4000) b = 4000;
+            id(mv_backoff_ms) = b;
+          } else {
+            id(mv_backoff_ms) = 0;
+          }
       - light.turn_on:
           id: status_led
           red: 100%
           green: 0%
           blue: 0%
           brightness: 35%
-      - delay: 250ms                      # dead time before reversing
-      - script.execute:
-          id: energize
-          unlock: !lambda 'return !id(mv_unlock);'
-      - delay: !lambda 'return id(mv_backoff_ms);'
-      - script.execute: coast
+      # A failed current sensor cannot supervise a reverse move: coast and
+      # latch the fault without attempting back-off.
+      - if:
+          condition:
+            lambda: 'return id(mv_outcome) != 4;'
+          then:
+            - delay: 250ms                # dead time before reversing
+            - script.execute:
+                id: energize
+                unlock: !lambda 'return !id(mv_unlock);'
+            - script.wait: energize
+            - delay: !lambda 'return id(mv_backoff_ms);'
+            - script.execute: coast
+            - script.wait: coast
 
       - lambda: 'id(lock_state) = 3;'     # JAMMED
       - script.execute: publish_lock_state
@@ -701,31 +775,47 @@ script:
             travel: !lambda 'return (float) id(mv_travel_ms);'
       - logger.log:
           level: WARN
-          format: "MOVE FAILED (%s) after %u ms, peak %.3f A"
-          args: ['id(fault_reason).c_str()', 'id(mv_travel_ms)', 'id(mv_peak_a)']
+          format: "MOVE FAILED (%s) after %lu ms, peak %.3f A"
+          args: ['id(fault_reason).c_str()', '(unsigned long) id(mv_travel_ms)', 'id(mv_peak_a)']
 
   # --- bench jog: fixed 400 ms, no protection logic ------------------------
   - id: jog_unlock
     mode: single
     then:
+      - script.stop: cmd
       - script.stop: move_actuator
+      - script.stop: finish_fault
+      - script.stop: finish_ok
+      - script.stop: energize
+      - script.stop: jog_lock
       - script.execute: coast
+      - script.wait: coast
       - delay: 200ms
       - script.execute: {id: energize, unlock: true}
+      - script.wait: energize
       - delay: 400ms
       - script.execute: coast
+      - script.wait: coast
       - lambda: 'id(lock_state) = 0;'
       - script.execute: publish_lock_state
 
   - id: jog_lock
     mode: single
     then:
+      - script.stop: cmd
       - script.stop: move_actuator
+      - script.stop: finish_fault
+      - script.stop: finish_ok
+      - script.stop: energize
+      - script.stop: jog_unlock
       - script.execute: coast
+      - script.wait: coast
       - delay: 200ms
       - script.execute: {id: energize, unlock: false}
+      - script.wait: energize
       - delay: 400ms
       - script.execute: coast
+      - script.wait: coast
       - lambda: 'id(lock_state) = 0;'
       - script.execute: publish_lock_state
 
@@ -743,9 +833,15 @@ interval:
                      (millis() - id(mv_start_ms)) >
                      (uint32_t) (id(cfg_max_travel_ms).state + 6000);
           then:
+            - script.stop: cmd
             - script.stop: move_actuator
             - script.stop: finish_fault
+            - script.stop: finish_ok
+            - script.stop: energize
+            - script.stop: jog_unlock
+            - script.stop: jog_lock
             - script.execute: coast
+            - script.wait: coast
             - lambda: |-
                 id(mv_running)   = false;
                 id(lock_state)   = 0;

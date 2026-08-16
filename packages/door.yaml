@@ -46,7 +46,7 @@ globals:
     type: uint32_t
     restore_value: false
     initial_value: '0'
-  # 0 running | 1 reached end of travel | 2 jam | 3 timeout
+  # 0 running | 1 reached end of travel | 2 jam | 3 timeout | 4 current sensor fault
   - id: ${door}_mv_outcome
     type: int
     restore_value: false
@@ -56,6 +56,10 @@ globals:
     restore_value: false
     initial_value: '0'
   - id: ${door}_mv_stall_hits
+    type: int
+    restore_value: false
+    initial_value: '0'
+  - id: ${door}_mv_invalid_hits
     type: int
     restore_value: false
     initial_value: '0'
@@ -107,14 +111,29 @@ sensor:
             if (!id(${door}_mv_running)) return;
 
             const uint32_t el = millis() - id(${door}_mv_start_ms);
-            const float i = isnan(x) ? 0.0f : x;
 
-            // Inrush window: log the peak but do not judge yet.
-            if (el < (uint32_t) id(${door}_cfg_blank_ms).state) return;
+            // Never interpret a failed current reading as an open internal
+            // limit switch. Three bad samples are a latched sensor fault.
+            if (!std::isfinite(x)) {
+              id(${door}_mv_invalid_hits)++;
+              id(${door}_mv_idle_hits) = 0;
+              id(${door}_mv_stall_hits) = 0;
+              if (id(${door}_mv_invalid_hits) >= 3) {
+                id(${door}_mv_outcome) = 4;
+                id(${door}_mv_running) = false;
+              }
+              return;
+            }
+            id(${door}_mv_invalid_hits) = 0;
+            const float i = x;
 
+            // Capture the true peak, including inrush, for commissioning.
             if (i > id(${door}_mv_peak_a)) id(${door}_mv_peak_a) = i;
 
-            // Hard over-current: abort immediately, no debounce.
+            // Ignore decision thresholds during the configured inrush window.
+            if (el < (uint32_t) id(${door}_cfg_blank_ms).state) return;
+
+            // Post-inrush hard over-current: abort on the first sample.
             if (i > id(${door}_cfg_hard_a).state) {
               id(${door}_mv_outcome) = 2;
               id(${door}_mv_running) = false;
@@ -212,7 +231,7 @@ number:
     id: ${door}_cfg_idle_a
     optimistic: true
     restore_value: true
-    initial_value: 0.04
+    initial_value: 0.01
     min_value: 0.005
     max_value: 0.500
     step: 0.005
@@ -251,7 +270,7 @@ number:
     id: ${door}_cfg_max_travel_ms
     optimistic: true
     restore_value: true
-    initial_value: 9000
+    initial_value: 4500
     min_value: 500
     max_value: 30000
     step: 100
@@ -276,6 +295,7 @@ binary_sensor:
     id: ${door}_sw_locked
     name: "${door_friendly} bolt locked switch"
     entity_category: diagnostic
+    disabled_by_default: true
     pin:
       number: ${pin_sw_locked}
       mode:
@@ -299,6 +319,7 @@ binary_sensor:
     id: ${door}_sw_unlocked
     name: "${door_friendly} bolt unlocked switch"
     entity_category: diagnostic
+    disabled_by_default: true
     pin:
       number: ${pin_sw_unlocked}
       mode:
@@ -369,8 +390,15 @@ button:
     id: ${door}_btn_stop
     entity_category: config
     on_press:
+      - script.stop: ${door}_cmd
       - script.stop: ${door}_move_actuator
+      - script.stop: ${door}_finish_fault
+      - script.stop: ${door}_finish_ok
+      - script.stop: ${door}_energize
+      - script.stop: ${door}_jog_unlock
+      - script.stop: ${door}_jog_lock
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - lambda: |-
           id(${door}_mv_running) = false;
           id(${door}_fault_reason) = "stopped by user";
@@ -398,11 +426,13 @@ button:
   - platform: template
     name: "${door_friendly} jog unlock"
     entity_category: config
+    disabled_by_default: true
     on_press:
       - script.execute: ${door}_jog_unlock
   - platform: template
     name: "${door_friendly} jog lock"
     entity_category: config
+    disabled_by_default: true
     on_press:
       - script.execute: ${door}_jog_lock
 
@@ -419,7 +449,8 @@ script:
       - lambda: 'id(${door}_mv_energized) = false;'
 
   - id: ${door}_energize
-    mode: single
+    # A new direction request must cancel a pending 5 ms dead-time action.
+    mode: restart
     parameters:
       unlock: bool
     then:
@@ -458,7 +489,13 @@ script:
       unlock: bool
     then:
       - script.stop: ${door}_move_actuator
+      - script.stop: ${door}_finish_fault
+      - script.stop: ${door}_finish_ok
+      - script.stop: ${door}_energize
+      - script.stop: ${door}_jog_unlock
+      - script.stop: ${door}_jog_lock
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - lambda: 'id(${door}_mv_running) = false;'
       - delay: 200ms
       - script.execute:
@@ -492,6 +529,7 @@ script:
                 id(${door}_mv_outcome)    = 0;
                 id(${door}_mv_idle_hits)  = 0;
                 id(${door}_mv_stall_hits) = 0;
+                id(${door}_mv_invalid_hits) = 0;
                 id(${door}_mv_peak_a)     = 0.0f;
                 id(${door}_lock_state)    = unlock ? 5 : 4;
             - script.execute: ${door}_publish_lock_state
@@ -499,6 +537,7 @@ script:
             - script.execute:
                 id: ${door}_energize
                 unlock: !lambda 'return unlock;'
+            - script.wait: ${door}_energize
 
             # Wait for the current monitor to reach a verdict.
             - while:
@@ -508,6 +547,7 @@ script:
                   - delay: 20ms
 
             - script.execute: ${door}_coast
+            - script.wait: ${door}_coast
             - lambda: 'id(${door}_mv_travel_ms) = millis() - id(${door}_mv_start_ms);'
             - sensor.template.publish:
                 id: ${door}_peak_current_reported
@@ -521,8 +561,10 @@ script:
                   lambda: 'return id(${door}_mv_outcome) == 1;'
                 then:
                   - script.execute: ${door}_finish_ok
+                  - script.wait: ${door}_finish_ok
                 else:
                   - script.execute: ${door}_finish_fault
+                  - script.wait: ${door}_finish_fault
 
   - id: ${door}_finish_ok
     mode: single
@@ -553,24 +595,40 @@ script:
     mode: single
     then:
       - lambda: |-
-          id(${door}_fault_reason) = (id(${door}_mv_outcome) == 3)
-              ? "timeout - no end of travel detected"
-              : "obstruction - stalled mid-travel";
-          uint32_t b = id(${door}_mv_travel_ms) + 250;
-          if (b > 4000) b = 4000;
-          id(${door}_mv_backoff_ms) = b;
+          if (id(${door}_mv_outcome) == 3) {
+            id(${door}_fault_reason) = "timeout - no end of travel detected";
+          } else if (id(${door}_mv_outcome) == 4) {
+            id(${door}_fault_reason) = "current sensor unavailable";
+          } else {
+            id(${door}_fault_reason) = "obstruction - stalled mid-travel";
+          }
+          if (id(${door}_mv_outcome) != 4) {
+            uint32_t b = id(${door}_mv_travel_ms) + 250;
+            if (b > 4000) b = 4000;
+            id(${door}_mv_backoff_ms) = b;
+          } else {
+            id(${door}_mv_backoff_ms) = 0;
+          }
       - light.turn_on:
           id: status_led
           red: 100%
           green: 0%
           blue: 0%
           brightness: 35%
-      - delay: 250ms                      # dead time before reversing
-      - script.execute:
-          id: ${door}_energize
-          unlock: !lambda 'return !id(${door}_mv_unlock);'
-      - delay: !lambda 'return id(${door}_mv_backoff_ms);'
-      - script.execute: ${door}_coast
+      # A failed current sensor cannot supervise a reverse move: coast and
+      # latch the fault without attempting back-off.
+      - if:
+          condition:
+            lambda: 'return id(${door}_mv_outcome) != 4;'
+          then:
+            - delay: 250ms                # dead time before reversing
+            - script.execute:
+                id: ${door}_energize
+                unlock: !lambda 'return !id(${door}_mv_unlock);'
+            - script.wait: ${door}_energize
+            - delay: !lambda 'return id(${door}_mv_backoff_ms);'
+            - script.execute: ${door}_coast
+            - script.wait: ${door}_coast
 
       - lambda: 'id(${door}_lock_state) = 3;'     # JAMMED
       - script.execute: ${door}_publish_lock_state
@@ -597,35 +655,51 @@ script:
             travel: !lambda 'return (float) id(${door}_mv_travel_ms);'
       - logger.log:
           level: WARN
-          format: "${door_friendly}: MOVE FAILED (%s) after %u ms, peak %.3f A"
-          args: ['id(${door}_fault_reason).c_str()', 'id(${door}_mv_travel_ms)', 'id(${door}_mv_peak_a)']
+          format: "${door_friendly}: MOVE FAILED (%s) after %lu ms, peak %.3f A"
+          args: ['id(${door}_fault_reason).c_str()', '(unsigned long) id(${door}_mv_travel_ms)', 'id(${door}_mv_peak_a)']
 
   # --- bench jog: fixed 400 ms, no protection logic ------------------------
   - id: ${door}_jog_unlock
     mode: single
     then:
+      - script.stop: ${door}_cmd
       - script.stop: ${door}_move_actuator
+      - script.stop: ${door}_finish_fault
+      - script.stop: ${door}_finish_ok
+      - script.stop: ${door}_energize
+      - script.stop: ${door}_jog_lock
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - delay: 200ms
       - script.execute:
           id: ${door}_energize
           unlock: true
+      - script.wait: ${door}_energize
       - delay: 400ms
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - lambda: 'id(${door}_lock_state) = 0;'
       - script.execute: ${door}_publish_lock_state
 
   - id: ${door}_jog_lock
     mode: single
     then:
+      - script.stop: ${door}_cmd
       - script.stop: ${door}_move_actuator
+      - script.stop: ${door}_finish_fault
+      - script.stop: ${door}_finish_ok
+      - script.stop: ${door}_energize
+      - script.stop: ${door}_jog_unlock
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - delay: 200ms
       - script.execute:
           id: ${door}_energize
           unlock: false
+      - script.wait: ${door}_energize
       - delay: 400ms
       - script.execute: ${door}_coast
+      - script.wait: ${door}_coast
       - lambda: 'id(${door}_lock_state) = 0;'
       - script.execute: ${door}_publish_lock_state
 
@@ -643,9 +717,15 @@ interval:
                      (millis() - id(${door}_mv_start_ms)) >
                      (uint32_t) (id(${door}_cfg_max_travel_ms).state + 6000);
           then:
+            - script.stop: ${door}_cmd
             - script.stop: ${door}_move_actuator
             - script.stop: ${door}_finish_fault
+            - script.stop: ${door}_finish_ok
+            - script.stop: ${door}_energize
+            - script.stop: ${door}_jog_unlock
+            - script.stop: ${door}_jog_lock
             - script.execute: ${door}_coast
+            - script.wait: ${door}_coast
             - lambda: |-
                 id(${door}_mv_running)   = false;
                 id(${door}_lock_state)   = 0;

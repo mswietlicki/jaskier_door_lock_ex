@@ -974,7 +974,7 @@
       </svg>
     </div>
     <figcaption>
-      <b>The only thing separating ② from ③ is the clock.</b> A stall after <code>min travel time</code> is the bolt arriving; the same stall before it is an obstruction. That one threshold is what you tune first, and it is why <code>min travel time</code> must be set from a measured stroke rather than guessed. Panels ③ and ④ also fire a <code>esphome.door_lock_fault</code> event and set the lock entity to <em>Jammed</em>. A fifth path exists but isn't drawn: current above the <em>hard current limit</em> aborts on the first sample, with no debounce at all.
+      <b>The only thing separating ② from ③ is the clock.</b> A stall after <code>min travel time</code> is the bolt arriving; the same stall before it is an obstruction. That one threshold is what you tune first, and it is why <code>min travel time</code> must be set from a measured stroke rather than guessed. Panels ③ and ④ also fire a <code>esphome.door_lock_fault</code> event and set the lock entity to <em>Jammed</em>. A fifth path exists but isn't drawn: after inrush blanking, current above the <em>hard current limit</em> aborts on the first sample, with no debounce. Three invalid current samples latch a sensor fault without attempting back-off.
     </figcaption>
   </figure>
 </section>
@@ -1037,12 +1037,12 @@
     <table>
       <thead><tr><th>Entity</th><th class="mono">Default</th><th>How to pick it</th></tr></thead>
       <tbody>
-        <tr><td>Idle current</td><td class="mono">0.04 A</td><td>Well below free-running, above the standing draw with the motor stopped. Three samples under this = limit switch opened.</td></tr>
+        <tr><td>Idle current</td><td class="mono">0.01 A</td><td>Well below the commissioned 0.04–0.06 A free-running current, above the ≈0.003 A standing reading. Three samples under this = limit switch opened.</td></tr>
         <tr><td>Stall current</td><td class="mono">0.40 A</td><td>Roughly midway between free-running and the 0.5 A stall. Raise it if normal moves trip a false jam.</td></tr>
-        <tr><td>Hard current limit</td><td class="mono">0.60 A</td><td>Just above stall. Trips on a single sample, no debounce — the fast path for a hard mechanical block.</td></tr>
+        <tr><td>Hard current limit</td><td class="mono">0.60 A</td><td>Just above stall. After inrush blanking, trips on a single sample with no debounce — the fast path for a hard mechanical block.</td></tr>
         <tr><td>Inrush blanking</td><td class="mono">400 ms</td><td>Long enough to cover the startup spike. Shorten it only if you can see the spike is over sooner in the logs.</td></tr>
         <tr><td>Min travel time</td><td class="mono">1500 ms</td><td>≈ 70 % of the measured full stroke. Below this, a stall means an obstruction.</td></tr>
-        <tr><td>Max travel time</td><td class="mono">9000 ms</td><td>≈ 150 % of the measured full stroke. Reaching it is a timeout fault.</td></tr>
+        <tr><td>Max travel time</td><td class="mono">4500 ms</td><td>Commissioned 1.7–2.8 s stroke plus cold-weather margin. Reaching it is a timeout fault.</td></tr>
       </tbody>
     </table>
   </div>

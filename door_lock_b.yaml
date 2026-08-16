@@ -45,6 +45,9 @@ esphome:
   name: ${device_name}
   friendly_name: ${friendly}
   min_version: 2024.6.0
+  project:
+    name: mswietlicki.jaskier_door_lock_b
+    version: "1.1.0"
   on_boot:
     # Belt-and-braces: the 10 k pull-downs on every IN pin hold all four
     # bridges off during reset; this makes sure firmware agrees as soon as
@@ -64,6 +67,46 @@ esphome:
         - script.execute: d2_publish_lock_state
         - script.execute: d3_publish_lock_state
         - script.execute: d4_publish_lock_state
+  on_shutdown:
+    # Cancel every delayed motion path before GPIO teardown.
+    - priority: 700
+      then:
+        - script.stop: d1_cmd
+        - script.stop: d2_cmd
+        - script.stop: d3_cmd
+        - script.stop: d4_cmd
+        - script.stop: d1_move_actuator
+        - script.stop: d2_move_actuator
+        - script.stop: d3_move_actuator
+        - script.stop: d4_move_actuator
+        - script.stop: d1_finish_fault
+        - script.stop: d2_finish_fault
+        - script.stop: d3_finish_fault
+        - script.stop: d4_finish_fault
+        - script.stop: d1_finish_ok
+        - script.stop: d2_finish_ok
+        - script.stop: d3_finish_ok
+        - script.stop: d4_finish_ok
+        - script.stop: d1_energize
+        - script.stop: d2_energize
+        - script.stop: d3_energize
+        - script.stop: d4_energize
+        - script.stop: d1_jog_unlock
+        - script.stop: d2_jog_unlock
+        - script.stop: d3_jog_unlock
+        - script.stop: d4_jog_unlock
+        - script.stop: d1_jog_lock
+        - script.stop: d2_jog_lock
+        - script.stop: d3_jog_lock
+        - script.stop: d4_jog_lock
+        - script.execute: d1_coast
+        - script.execute: d2_coast
+        - script.execute: d3_coast
+        - script.execute: d4_coast
+        - script.wait: d1_coast
+        - script.wait: d2_coast
+        - script.wait: d3_coast
+        - script.wait: d4_coast
 
 esp32:
   board: esp32-s3-devkitc-1
