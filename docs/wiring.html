@@ -776,7 +776,7 @@
         <tr><td class="mono">R2</td><td class="mono">GPIO7</td><td>U2 IN2</td><td>Plain GPIO.</td></tr>
         <tr><td class="mono">R3</td><td class="mono">GPIO8</td><td>U3 SDA</td><td>Strapping pin that must be <em>high</em> at boot — the I²C pull-up satisfies that.</td></tr>
         <tr><td class="mono">R4</td><td class="mono">GPIO9</td><td>U3 SCL</td><td>BOOT button. Held low at reset it enters the ROM bootloader; I²C idles high so it never does. Don't press BOOT while the bus is live.</td></tr>
-        <tr><td class="mono">R5</td><td class="mono">GPIO10</td><td>on-board WS2812</td><td>Status LED, no external wiring.</td></tr>
+        <tr><td class="mono">R5</td><td class="mono">GPIO10</td><td>on-board WS2812</td><td>Health and action indicator, RGB data order; no external wiring.</td></tr>
         <tr><td class="mono">R6</td><td class="mono">GPIO18</td><td class="nc">reserved</td><td>USB D−. Leave open or you lose USB flashing and logging.</td></tr>
         <tr><td class="mono">R7</td><td class="mono">GPIO19</td><td class="nc">reserved</td><td>USB D+.</td></tr>
         <tr><td class="mono">R8</td><td class="mono">GPIO20</td><td class="nc">free</td><td>UART0 RX. Free here because logging goes over USB.</td></tr>
@@ -784,6 +784,26 @@
       </tbody>
     </table>
   </div>
+
+  <h3>ESP32-C3-Zero on-board LED</h3>
+  <p>The firmware uses the GPIO10 WS2812 as a self-contained health and action indicator:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>LED</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Amber slow pulse</td><td>Firmware is alive and joining Wi-Fi.</td></tr>
+        <tr><td>Blue slow pulse</td><td>Wi-Fi is connected; waiting for the Home Assistant API.</td></tr>
+        <tr><td>Dim green</td><td>Home Assistant is connected and the lock reports locked.</td></tr>
+        <tr><td>Dim blue</td><td>Home Assistant is connected and the lock reports unlocked.</td></tr>
+        <tr><td>Dim amber</td><td>Home Assistant is connected and the position is unknown or stopped.</td></tr>
+        <tr><td>Magenta fast pulse</td><td>Locking.</td></tr>
+        <tr><td>Cyan fast pulse</td><td>Unlocking.</td></tr>
+        <tr><td>Green flash</td><td>Movement completed successfully.</td></tr>
+        <tr><td>Red fast pulse</td><td>Latched jam, timeout, current-sensor, or watchdog fault.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The LED is driven by the application firmware, so a dark LED does not by itself prove that the board has no power. For USB recovery, hold <strong>BOOT</strong>, tap <strong>RESET</strong>, release <strong>BOOT</strong>, and flash while the board is in ROM download mode. See the <a href="https://docs.waveshare.com/ESP32-C3-Zero">Waveshare ESP32-C3-Zero documentation</a>.</p>
 
   <h3>U2 — DRV8871 breakout (Adafruit 3190)</h3>
   <div class="tablewrap">
@@ -1067,8 +1087,8 @@
         <tr><td>Fault</td><td class="mono">binary_sensor</td><td>Problem class. Latches until cleared.</td></tr>
         <tr><td>Last result</td><td class="mono">text_sensor</td><td>Plain text: <code>locked</code>, <code>obstruction — stalled mid-travel</code>, and so on.</td></tr>
         <tr><td>Stop</td><td class="mono">button</td><td>Aborts a move immediately, state goes unknown.</td></tr>
-        <tr><td>Clear fault</td><td class="mono">button</td><td>Drops the fault flag and the red LED.</td></tr>
-        <tr><td>Jog unlock / Jog lock</td><td class="mono">button</td><td>400 ms bench nudge, no protection logic.</td></tr>
+        <tr><td>Clear fault</td><td class="mono">button</td><td>Drops the fault flag; the LED returns to the current connectivity and lock state.</td></tr>
+        <tr><td>Jog unlock / Jog lock</td><td class="mono">button</td><td>400 ms bench nudge, no protection logic. Disabled by default; enable only while commissioning.</td></tr>
         <tr><td>Use position switches</td><td class="mono">switch</td><td>Off by default. Turn on once SW1/SW2 exist.</td></tr>
         <tr><td>Six thresholds</td><td class="mono">number</td><td>Config category. Stored in flash.</td></tr>
       </tbody>

@@ -157,11 +157,29 @@ the stacked 4 MB flash and are not brought out.
 | R2 | `GPIO7` | U2 IN2 | Plain GPIO. |
 | R3 | `GPIO8` | U3 SDA | Strapping pin that must be *high* at boot — the I²C pull-up satisfies that. |
 | R4 | `GPIO9` | U3 SCL | BOOT button. Held low at reset it enters the ROM bootloader; I²C idles high so it never does. Don't press BOOT while the bus is live. |
-| R5 | `GPIO10` | on-board WS2812 | Status LED, no external wiring. |
+| R5 | `GPIO10` | on-board WS2812 | Health and action indicator, RGB data order; no external wiring. |
 | R6 | `GPIO18` | *reserved* | USB D−. Leave open or you lose USB flashing and logging. |
 | R7 | `GPIO19` | *reserved* | USB D+. |
 | R8 | `GPIO20` | *free* | UART0 RX. Free here because logging goes over USB. |
 | R9 | `GPIO21` | *free* | UART0 TX. |
+
+### ESP32-C3-Zero on-board LED
+
+The firmware uses the GPIO10 WS2812 as a self-contained health and action indicator:
+
+| LED | Meaning |
+|---|---|
+| Amber slow pulse | Firmware is alive and joining Wi-Fi. |
+| Blue slow pulse | Wi-Fi is connected; waiting for the Home Assistant API. |
+| Dim green | Home Assistant is connected and the lock reports locked. |
+| Dim blue | Home Assistant is connected and the lock reports unlocked. |
+| Dim amber | Home Assistant is connected and the position is unknown or stopped. |
+| Magenta fast pulse | Locking. |
+| Cyan fast pulse | Unlocking. |
+| Green flash | Movement completed successfully. |
+| Red fast pulse | Latched jam, timeout, current-sensor, or watchdog fault. |
+
+The LED is driven by the application firmware, so a dark LED does not by itself prove that the board has no power. For USB recovery, hold **BOOT**, tap **RESET**, release **BOOT**, and flash the firmware while the board is in ROM download mode. See the [Waveshare ESP32-C3-Zero documentation](https://docs.waveshare.com/ESP32-C3-Zero).
 
 ### U2 — DRV8871 breakout (Adafruit 3190)
 
@@ -369,7 +387,7 @@ matters is that the free-running current sits clearly between `idle current` and
 | Fault | `binary_sensor` | Problem class. Latches until cleared. |
 | Last result | `text_sensor` | Plain text: `locked`, `obstruction - stalled mid-travel`, and so on. |
 | Stop | `button` | Aborts a move immediately, state goes unknown. |
-| Clear fault | `button` | Drops the fault flag and the red LED. |
+| Clear fault | `button` | Drops the fault flag; the LED returns to the current connectivity and lock state. |
 | Jog unlock / Jog lock | `button` | 400 ms bench nudge, no protection logic. Disabled by default; enable only while commissioning. |
 | Use position switches | `switch` | Off by default. Turn on once SW1/SW2 exist. |
 | Six thresholds | `number` | Config category. Stored in flash. |
