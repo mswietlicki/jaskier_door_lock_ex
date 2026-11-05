@@ -223,18 +223,18 @@ The plan for `door_lock_c.yaml`:
 
 ## Ordering
 
-Bare boards from JLCPCB, parts from LCSC, assembled by hand. One order covers this board and the
-CAN-B node.
+Bare boards from JLCPCB, parts from LCSC, assembled by hand. One order covers this board, the
+CAN-B node and the RS485 tee (jaskier repo, `hardware/rs485-tee`).
 
 - **PCB:** `jlcpcb/door-lock-c-gerbers.zip`, 2 layers, 1.6 mm, 1 oz. ENIG keeps the 0.65 mm
   INA219 pads flat. HASL works too. No assembly, so no edge rails and no placement file are
   needed.
 - **Stencil (optional):** a top-side SMT stencil from the same zip (the F.Paste layer), worth it
   with a hot plate or hot air. Add it to the same JLCPCB cart.
-- **Parts:** `jlcpcb/lcsc-order.csv` is one LCSC order for 2 door-lock-c boards and 2 CAN-B nodes,
-  with spares (+20 % or at least 2 for chip passives, +1 for the rest), including the TERM jumper
-  cap. Load it in LCSC's BOM tool (columns LCSC Part Number, Quantity). LCSC rounds each line up
-  to its minimum order. For other counts: `python tools/lcsc_order.py --door N --canb M`.
+- **Parts:** `jlcpcb/lcsc-order.csv` is one LCSC order for 2 door-lock-c boards, 2 CAN-B nodes and
+  5 RS485 tees, with spares (+20 % or at least 2 for chip passives, +1 for the rest), including the
+  TERM jumper caps. Load it in LCSC's BOM tool (columns LCSC Part Number, Quantity). LCSC rounds each line up
+  to its minimum order. For other counts: `python tools/lcsc_order.py --door N --canb M --tee K`.
 - **Stock on LCSC, 5 November 2026:**
 
   | Part | LCSC | Stock |
@@ -316,7 +316,7 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
 | `tools/gen_sch.py` | Writes the schematic and project (any Python 3) |
 | `tools/gen_pcb.py`, `tools/router.py` | Build and route the board (KiCad's `python.exe`): placement from `layout.py`, then a two-layer A* grid router (0.1 mm grid, clearance-aware, bends and vias cost extra), GND vias, stitching, pours |
 | `tools/jlcpcb.py` | Gerbers, drills, BOM, assembly drawing; `--cpl` for a JLCPCB placement file (KiCad's `python.exe`) |
-| `tools/lcsc_order.py` | One LCSC order for N door-lock-c boards and M CAN-B nodes (any Python 3) |
+| `tools/lcsc_order.py` | One LCSC order for door-lock-c boards, CAN-B nodes and RS485 tees (any Python 3) |
 
 Regenerate everything from the project directory:
 
@@ -337,7 +337,7 @@ kicad-cli sch export netlist -o netlist.net door-lock-c.kicad_sch
 ```
 
 ```bash
-python tools/lcsc_order.py --door 2 --canb 2
+python tools/lcsc_order.py --door 2 --canb 2 --tee 5
 ```
 
 Regenerating overwrites hand edits made in KiCad. Routing takes about two minutes.
