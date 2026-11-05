@@ -1,0 +1,339 @@
+# =============================================================================
+#  jaskier_door_lock — variant C — two 12 V actuator door locks on the
+#  door-lock-c board (hardware/door-lock-c), with door contacts and an
+#  optional RS485 Modbus RTU port for control without Wi-Fi.
+# -----------------------------------------------------------------------------
+#  U1/U3  INA219 (0.1 R shunt)       door A 0x40, door B 0x44
+#  U2/U4  DRV8871                    one H-bridge per door
+#  U5     SP3485                     RS485 on UART0, DE/RE on IO10
+#  ESP    ESP32-C3 SuperMini (socket)
+#  BAT    LiFePO4 4S, 12.8 V nom (10.0-14.6 V)
+#
+#  Each door runs variant A's current-based state machine (packages/door.yaml)
+#  plus a wired door contact (packages/door_contact.yaml). Home Assistant sees
+#  the usual ESPHome entities over Wi-Fi; any Modbus master on the RS485 bus
+#  (HA's Modbus integration through a gateway) can read the state and lock or
+#  unlock through the registers at the bottom of this file.
+#
+#  No reboot without Wi-Fi or Home Assistant (reboot_timeout 0s): with RS485 the
+#  board must keep working when both are gone.
+# =============================================================================
+
+substitutions:
+  device_name: jaskier-door-lock-c
+  friendly: Door locks
+  modbus_address: "60"      # must be free on the bus it joins (modbus/README.md in the HA repo)
+  modbus_baud: "9600"       # 8N1, like the van's other buses
+
+  # ---- board pins (hardware/door-lock-c/README.md) -------------------------
+  pin_sda: GPIO8            # pulled up on the board: strapping pin stays high
+  pin_scl: GPIO9            # BOOT button on the SuperMini, pulled up
+  pin_rgb: GPIO2            # WS2812B-type status LED (strapping pin, 10 k pull-up)
+  pin_rs485_tx: GPIO21      # SP3485 DI (UART0 TX)
+  pin_rs485_rx: GPIO20      # SP3485 RO (UART0 RX)
+  pin_rs485_de: GPIO10      # SP3485 DE + /RE, 10 k pull-down
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly}
+  min_version: 2026.8.0     # modbus_server with coils
+  project:
+    name: mswietlicki.jaskier_door_lock_c
+    version: "1.0.0"
+  on_boot:
+    # The 4.7 k pull-downs hold both bridges off through reset; this makes sure
+    # the firmware agrees as soon as the outputs exist.
+    - priority: 600
+      then:
+        - script.execute: d1_coast
+        - script.execute: d2_coast
+        - lambda: |-
+            id(d1_fault_reason) = "boot"; id(d1_mv_running) = false;
+            id(d2_fault_reason) = "boot"; id(d2_mv_running) = false;
+        - script.execute: d1_publish_lock_state
+        - script.execute: d2_publish_lock_state
+        - script.execute: led_update
+  on_shutdown:
+    - priority: 700
+      then:
+        - script.stop: d1_cmd
+        - script.stop: d2_cmd
+        - script.stop: d1_move_actuator
+        - script.stop: d2_move_actuator
+        - script.stop: d1_finish_fault
+        - script.stop: d2_finish_fault
+        - script.stop: d1_finish_ok
+        - script.stop: d2_finish_ok
+        - script.stop: d1_energize
+        - script.stop: d2_energize
+        - script.stop: d1_jog_unlock
+        - script.stop: d2_jog_unlock
+        - script.stop: d1_jog_lock
+        - script.stop: d2_jog_lock
+        # Synchronous, so a reboot cannot be held up by a scheduled script.
+        - output.turn_off: d1_drv_in1
+        - output.turn_off: d1_drv_in2
+        - output.turn_off: d2_drv_in1
+        - output.turn_off: d2_drv_in2
+        - lambda: |-
+            id(d1_mv_energized) = false;
+            id(d2_mv_energized) = false;
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+  hardware_uart: USB_SERIAL_JTAG   # logs over the SuperMini's USB-C; UART0 is RS485
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  reboot_timeout: 0s
+  on_client_connected:
+    - script.execute: led_update
+  on_client_disconnected:
+    - if:
+        condition:
+          lambda: 'return id(d1_mv_running) || id(d2_mv_running);'
+        then:
+          - logger.log: "API lost while a door is moving - continuing, moves are self-limiting"
+    - script.execute: led_update
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s
+  on_connect:
+    - script.execute: led_update
+  on_disconnect:
+    - script.execute: led_update
+  ap:
+    ssid: ${device_name}-setup
+    password: !secret ap_password
+
+captive_portal:
+
+i2c:
+  sda: ${pin_sda}
+  scl: ${pin_scl}
+  frequency: 400kHz
+  scan: true
+
+# =============================================================================
+#  shared sensors — both INA219s sit on the same bank, so the supply voltage
+#  comes from door A's chip
+# =============================================================================
+sensor:
+  - platform: template
+    name: "${friendly} supply voltage"
+    id: supply_voltage
+    unit_of_measurement: V
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: 'return id(d1_bus_voltage).state;'
+    filters:
+      - delta: 0.05
+  - platform: wifi_signal
+    name: "${friendly} Wi-Fi signal"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "${friendly} uptime"
+    entity_category: diagnostic
+
+# =============================================================================
+#  status LED — red: a fault is latched | white: a door is moving |
+#  amber: no Wi-Fi | dim green: all quiet. A finished move flashes green.
+# =============================================================================
+light:
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    internal: true
+    pin: ${pin_rgb}
+    num_leds: 1
+    chipset: WS2812
+    channel_colors: GRB
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 0s
+
+script:
+  - id: led_update
+    mode: restart
+    then:
+      - lambda: |-
+          const bool fault = id(d1_lock_fault).state || id(d2_lock_fault).state;
+          const bool moving = id(d1_mv_running) || id(d2_mv_running);
+          auto call = id(status_led).turn_on();
+          if (fault) {
+            call.set_rgb(1.0f, 0.0f, 0.0f); call.set_brightness(0.35f);
+          } else if (moving) {
+            call.set_rgb(1.0f, 1.0f, 1.0f); call.set_brightness(0.25f);
+          } else if (!wifi::global_wifi_component->is_connected()) {
+            call.set_rgb(1.0f, 0.4f, 0.0f); call.set_brightness(0.10f);
+          } else {
+            call.set_rgb(0.0f, 1.0f, 0.0f); call.set_brightness(0.05f);
+          }
+          call.perform();
+
+# =============================================================================
+#  RS485 — Modbus RTU server (slave). Register map, 0-based, FC 3/4 read,
+#  FC 6/16 write; coils FC 1/5/15. Same table in hardware/door-lock-c/README.md.
+#
+#    coil 0 / 1   door A / B locked: read 1 = locked; write 1 = lock, 0 = unlock
+#    reg  0 / 1   door A / B command (write): 1 lock, 2 unlock, 3 stop, 4 clear fault
+#    reg  2 / 3   door A / B lock state: 0 unknown, 1 locked, 2 unlocked,
+#                 3 jammed, 4 locking, 5 unlocking
+#    reg  4 / 5   door A / B contact: 0 shut, 1 open, 2 contact not used
+#    reg  6 / 7   door A / B fault latched: 0 / 1
+#    reg  8       bank voltage, mV
+#    reg  9 / 10  door A / B last move peak current, mA
+#    reg 11 / 12  door A / B last move duration, ms
+#    reg 13       firmware version (100 = 1.0.0)
+#
+#  A lock command while the door is open is refused with exception 4.
+# =============================================================================
+uart:
+  id: rs485_uart
+  tx_pin: ${pin_rs485_tx}
+  rx_pin: ${pin_rs485_rx}
+  baud_rate: ${modbus_baud}
+  flow_control_pin: ${pin_rs485_de}   # hardware RS485 half-duplex mode
+
+modbus:
+  id: rs485_hub
+  uart_id: rs485_uart
+  role: server
+
+modbus_server:
+  - modbus_id: rs485_hub
+    address: ${modbus_address}
+    bits:
+      - address: 0
+        read_lambda: 'return id(d1_lock_state) == 1;'
+        write_lambda: |-
+          if (x && id(d1_lock_inhibit)) return false;
+          id(d1_cmd).execute(!x);
+          return true;
+      - address: 1
+        read_lambda: 'return id(d2_lock_state) == 1;'
+        write_lambda: |-
+          if (x && id(d2_lock_inhibit)) return false;
+          id(d2_cmd).execute(!x);
+          return true;
+    registers:
+      - address: 0
+        value_type: U_WORD
+        read_lambda: 'return 0;'
+        write_lambda: |-
+          switch (x) {
+            case 0: return true;
+            case 1: if (id(d1_lock_inhibit)) return false; id(d1_cmd).execute(false); return true;
+            case 2: id(d1_cmd).execute(true); return true;
+            case 3: id(d1_btn_stop).press(); return true;
+            case 4: id(d1_btn_clear).press(); return true;
+            default: return false;
+          }
+      - address: 1
+        value_type: U_WORD
+        read_lambda: 'return 0;'
+        write_lambda: |-
+          switch (x) {
+            case 0: return true;
+            case 1: if (id(d2_lock_inhibit)) return false; id(d2_cmd).execute(false); return true;
+            case 2: id(d2_cmd).execute(true); return true;
+            case 3: id(d2_btn_stop).press(); return true;
+            case 4: id(d2_btn_clear).press(); return true;
+            default: return false;
+          }
+      - address: 2
+        value_type: U_WORD
+        read_lambda: 'return (uint16_t) id(d1_lock_state);'
+      - address: 3
+        value_type: U_WORD
+        read_lambda: 'return (uint16_t) id(d2_lock_state);'
+      - address: 4
+        value_type: U_WORD
+        read_lambda: |-
+          if (!id(d1_cfg_use_contact).state) return 2;
+          return id(d1_door_open).state ? 1 : 0;
+      - address: 5
+        value_type: U_WORD
+        read_lambda: |-
+          if (!id(d2_cfg_use_contact).state) return 2;
+          return id(d2_door_open).state ? 1 : 0;
+      - address: 6
+        value_type: U_WORD
+        read_lambda: 'return id(d1_lock_fault).state ? 1 : 0;'
+      - address: 7
+        value_type: U_WORD
+        read_lambda: 'return id(d2_lock_fault).state ? 1 : 0;'
+      - address: 8
+        value_type: U_WORD
+        read_lambda: |-
+          const float v = id(d1_bus_voltage).state;
+          return std::isfinite(v) ? (uint16_t) lroundf(v * 1000.0f) : 0;
+      - address: 9
+        value_type: U_WORD
+        read_lambda: |-
+          const float a = id(d1_peak_current_reported).state;
+          return std::isfinite(a) ? (uint16_t) lroundf(a * 1000.0f) : 0;
+      - address: 10
+        value_type: U_WORD
+        read_lambda: |-
+          const float a = id(d2_peak_current_reported).state;
+          return std::isfinite(a) ? (uint16_t) lroundf(a * 1000.0f) : 0;
+      - address: 11
+        value_type: U_WORD
+        read_lambda: |-
+          const float t = id(d1_travel_reported).state;
+          return std::isfinite(t) ? (uint16_t) std::min(t, 65535.0f) : 0;
+      - address: 12
+        value_type: U_WORD
+        read_lambda: |-
+          const float t = id(d2_travel_reported).state;
+          return std::isfinite(t) ? (uint16_t) std::min(t, 65535.0f) : 0;
+      - address: 13
+        value_type: U_WORD
+        read_lambda: 'return 100;'
+
+# =============================================================================
+#  the two doors
+# =============================================================================
+packages:
+  door_a: !include
+    file: packages/door.yaml
+    vars:
+      door: d1
+      door_friendly: "Door A"
+      pin_in1: GPIO4
+      pin_in2: GPIO3
+      ina_address: "0x40"
+  door_a_contact: !include
+    file: packages/door_contact.yaml
+    vars:
+      door: d1
+      door_friendly: "Door A"
+      pin_contact: GPIO1
+  door_b: !include
+    file: packages/door.yaml
+    vars:
+      door: d2
+      door_friendly: "Door B"
+      pin_in1: GPIO5
+      pin_in2: GPIO6
+      ina_address: "0x44"
+  door_b_contact: !include
+    file: packages/door_contact.yaml
+    vars:
+      door: d2
+      door_friendly: "Door B"
+      pin_contact: GPIO0

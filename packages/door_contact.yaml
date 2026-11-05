@@ -1,0 +1,59 @@
+# =============================================================================
+#  packages/door_contact.yaml — wired magnetic door contact for one door
+#  (variant C). Include next to packages/door.yaml with the same `door` var.
+#
+#  Required vars:
+#    door             id prefix, e.g. d1 (same as in door.yaml)
+#    door_friendly    entity name prefix, e.g. "Door A"
+#    pin_contact      contact input: closed contact pulls it to GND
+#
+#  The contact counts only while "use door contact" is on (off by default, as
+#  an unconnected input reads like an open door). Then:
+#    * "<door> door" reports open/closed to Home Assistant (device class door)
+#    * lock commands are refused while the door is open, from Home Assistant,
+#      Modbus or a button alike (door.yaml checks ${door}_lock_inhibit)
+#  "contact closed when shut" (on by default) suits the usual alarm-type
+#  contact that closes when its magnet is next to it; turn it off for one that
+#  opens when the door shuts.
+# =============================================================================
+
+switch:
+  - platform: template
+    name: "${door_friendly} use door contact"
+    id: ${door}_cfg_use_contact
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+
+  - platform: template
+    name: "${door_friendly} contact closed when shut"
+    id: ${door}_cfg_contact_closed_shut
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+binary_sensor:
+  - platform: gpio
+    id: ${door}_contact_closed      # true = contact closed (input pulled to GND)
+    internal: true
+    pin:
+      number: ${pin_contact}
+      mode:
+        input: true
+        pullup: true                # the board has its own 10 k pull-up too
+      inverted: true
+    filters:
+      - delayed_on_off: 50ms
+
+  - platform: template
+    name: "${door_friendly} door"
+    id: ${door}_door_open
+    device_class: door              # on = open
+    lambda: |-
+      if (!id(${door}_cfg_use_contact).state) {
+        id(${door}_lock_inhibit) = false;
+        return {};
+      }
+      const bool open = id(${door}_contact_closed).state != id(${door}_cfg_contact_closed_shut).state;
+      id(${door}_lock_inhibit) = open;
+      return open;

@@ -185,7 +185,7 @@ light:
     pin: ${pin_rgb}
     num_leds: 1
     chipset: WS2812
-    rgb_order: GRB
+    channel_colors: GRB
     restore_mode: ALWAYS_OFF
 
 script:
@@ -212,7 +212,8 @@ script:
           }
 
 # =============================================================================
-#  the four doors — everything per-door lives in packages/door.yaml
+#  the four doors — the state machine lives in packages/door.yaml, the
+#  position switches and buttons in packages/door_switches.yaml
 # =============================================================================
 packages:
   door1: !include
@@ -222,10 +223,15 @@ packages:
       door_friendly: "Door 1"
       pin_in1: GPIO4
       pin_in2: GPIO5
+      ina_address: "0x40"
+  door1_switches: !include
+    file: packages/door_switches.yaml
+    vars:
+      door: d1
+      door_friendly: "Door 1"
       pin_sw_locked: GPIO10
       pin_sw_unlocked: GPIO11
       pin_button: GPIO39
-      ina_address: "0x40"
   door2: !include
     file: packages/door.yaml
     vars:
@@ -233,10 +239,15 @@ packages:
       door_friendly: "Door 2"
       pin_in1: GPIO6
       pin_in2: GPIO7
+      ina_address: "0x41"
+  door2_switches: !include
+    file: packages/door_switches.yaml
+    vars:
+      door: d2
+      door_friendly: "Door 2"
       pin_sw_locked: GPIO12
       pin_sw_unlocked: GPIO13
       pin_button: GPIO40
-      ina_address: "0x41"
   door3: !include
     file: packages/door.yaml
     vars:
@@ -244,10 +255,15 @@ packages:
       door_friendly: "Door 3"
       pin_in1: GPIO15
       pin_in2: GPIO16
+      ina_address: "0x44"
+  door3_switches: !include
+    file: packages/door_switches.yaml
+    vars:
+      door: d3
+      door_friendly: "Door 3"
       pin_sw_locked: GPIO14
       pin_sw_unlocked: GPIO21
       pin_button: GPIO41
-      ina_address: "0x44"
   door4: !include
     file: packages/door.yaml
     vars:
@@ -255,7 +271,12 @@ packages:
       door_friendly: "Door 4"
       pin_in1: GPIO17
       pin_in2: GPIO18
+      ina_address: "0x45"
+  door4_switches: !include
+    file: packages/door_switches.yaml
+    vars:
+      door: d4
+      door_friendly: "Door 4"
       pin_sw_locked: GPIO1
       pin_sw_unlocked: GPIO2
       pin_button: GPIO42
-      ina_address: "0x45"

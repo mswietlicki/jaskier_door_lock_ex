@@ -1,0 +1,102 @@
+# =============================================================================
+#  packages/door_switches.yaml — optional bolt position switches and a local
+#  push-button for one door (variant B). Include next to packages/door.yaml
+#  with the same `door` var.
+#
+#  Required vars:
+#    door             id prefix, e.g. d1 (same as in door.yaml)
+#    door_friendly    entity name prefix, e.g. "Door 1"
+#    pin_sw_locked    reed/limit switch, bolt fully LOCKED
+#    pin_sw_unlocked  reed/limit switch, bolt fully UNLOCKED
+#    pin_button       local push-button (toggle)
+#
+#  Unfitted pins float high on the internal pull-up and read inactive. The
+#  switches count only while "use position switches" is on: they end a move
+#  at once and let a command short-circuit when the bolt is already there.
+# =============================================================================
+
+switch:
+  # Turn this on only after this door's SW-L/SW-U are actually fitted.
+  - platform: template
+    name: "${door_friendly} use position switches"
+    id: ${door}_cfg_use_switches
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+    on_turn_on:
+      - lambda: |-
+          id(${door}_at_locked)   = id(${door}_sw_locked).state;
+          id(${door}_at_unlocked) = id(${door}_sw_unlocked).state;
+    on_turn_off:
+      - lambda: |-
+          id(${door}_at_locked)   = false;
+          id(${door}_at_unlocked) = false;
+
+binary_sensor:
+  - platform: gpio
+    id: ${door}_sw_locked
+    name: "${door_friendly} bolt locked switch"
+    entity_category: diagnostic
+    disabled_by_default: true
+    pin:
+      number: ${pin_sw_locked}
+      mode:
+        input: true
+        pullup: true
+      inverted: true          # switch to GND = closed = true
+    filters:
+      - delayed_on_off: 30ms
+    on_state:
+      - lambda: 'id(${door}_at_locked) = x && id(${door}_cfg_use_switches).state;'
+    on_press:
+      - if:
+          condition:
+            switch.is_on: ${door}_cfg_use_switches
+          then:
+            - lambda: |-
+                if (id(${door}_mv_running) && !id(${door}_mv_unlock)) {
+                  id(${door}_mv_outcome) = 1;
+                  id(${door}_mv_running) = false;
+                }
+
+  - platform: gpio
+    id: ${door}_sw_unlocked
+    name: "${door_friendly} bolt unlocked switch"
+    entity_category: diagnostic
+    disabled_by_default: true
+    pin:
+      number: ${pin_sw_unlocked}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on_off: 30ms
+    on_state:
+      - lambda: 'id(${door}_at_unlocked) = x && id(${door}_cfg_use_switches).state;'
+    on_press:
+      - if:
+          condition:
+            switch.is_on: ${door}_cfg_use_switches
+          then:
+            - lambda: |-
+                if (id(${door}_mv_running) && id(${door}_mv_unlock)) {
+                  id(${door}_mv_outcome) = 1;
+                  id(${door}_mv_running) = false;
+                }
+
+  - platform: gpio
+    id: ${door}_local_button
+    internal: true
+    pin:
+      number: ${pin_button}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 40ms
+    on_press:
+      - script.execute:
+          id: ${door}_cmd
+          unlock: !lambda 'return id(${door}_lock_state) != 2;'

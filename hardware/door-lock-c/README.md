@@ -7,8 +7,8 @@ RS485 port lets Home Assistant lock and unlock over Modbus RTU through the van's
 when Wi-Fi is down. It is a bare JLCPCB board with parts from LCSC, assembled by hand, and is
 ordered together with the CAN-B node (jaskier repo, `hardware/canb-node`).
 
-**Status: designed 5 November 2026, not ordered, not built, not tested. Firmware not written
-yet** (see [Firmware](#firmware-to-be-written)). KiCad 10 project: ERC 0 violations, DRC 0
+**Status: designed 5 November 2026, not ordered, not built, not tested.** Firmware:
+[`door_lock_c.yaml`](../../door_lock_c.yaml), see [Firmware](#firmware). KiCad 10 project: ERC 0 violations, DRC 0
 violations, 0 unconnected, schematic and board in parity.
 
 ![Board, 3D render](docs/board-3d.png)
@@ -159,46 +159,81 @@ could pull low. A door shut at power-up cannot put the ESP32 in download mode.
 
 The board is a Modbus RTU slave (server). It is meant for one of the van's RS485 buses, or a new
 one, through a Waveshare RS485-to-Ethernet gateway, and Home Assistant's Modbus integration
-(`modbus/README.md` and `docs/modbus-addressing.md` in the HA config repo). Use 9600 8N1 like the
-other buses. Give it a free slave address on the target bus, set in the firmware.
+(`modbus/README.md` and `docs/modbus-addressing.md` in the HA config repo). It runs 9600 8N1 like
+the other buses, at slave address 60 (free on every van bus on 5 November 2026). Both are
+substitutions at the top of `door_lock_c.yaml`.
 
-Proposed register map for the firmware (holding registers, 0-based, FC 3/4 to read, FC 6/16 to
-write; coils FC 1/5):
+Register map (0-based; holding registers FC 3/4 to read, FC 6/16 to write; coils FC 1/5/15):
 
 | Address | Kind | Content |
 |---|---|---|
 | coil 0 / 1 | read/write | Door A / B: 1 = locked. Write 1 to lock, 0 to unlock |
-| 0 / 1 | write | Door A / B command: 1 lock, 2 unlock, 3 stop, 4 clear fault |
-| 2 / 3 | read | Door A / B lock state: 0 unknown, 1 locked, 2 unlocked, 3 jammed, 4 locking, 5 unlocking (variant A's `lock_state`) |
-| 4 / 5 | read | Door A / B contact: 0 shut, 1 open |
+| 0 / 1 | write | Door A / B command: 1 lock, 2 unlock, 3 stop, 4 clear fault (reads 0) |
+| 2 / 3 | read | Door A / B lock state: 0 unknown, 1 locked, 2 unlocked, 3 jammed, 4 locking, 5 unlocking |
+| 4 / 5 | read | Door A / B contact: 0 shut, 1 open, 2 contact not in use |
 | 6 / 7 | read | Door A / B fault latched: 0 / 1 |
 | 8 | read | Bank voltage, mV (door A's INA219) |
 | 9 / 10 | read | Door A / B last move peak current, mA |
 | 11 / 12 | read | Door A / B last move duration, ms |
-| 13 | read | Firmware version |
+| 13 | read | Firmware version (100 = 1.0.0) |
 
-ESPHome 2026.10 has what this needs: `modbus: role: server`, `modbus_server:` with
-`read_lambda`/`write_lambda` on registers (since 2026.5) and coils (since 2026.8), and
-`flow_control_pin: GPIO10` on the `uart:` (hardware RS485 mode). Home Assistant has no Modbus lock
-platform. Use a `switch` on the coil, or a template lock whose actions call `modbus.write_register`.
+A lock command (coil write 1, or command 1) while that door's contact reads open is refused
+with exception 4 (device failure), and the bolt does not move. An unknown command value is
+refused with exception 4 too.
 
-## Firmware (to be written)
+Home Assistant has no Modbus lock platform. A `switch` on the coil works, for example on the
+`rs485_1` hub:
 
-The plan for `door_lock_c.yaml`:
+```yaml
+switches:
+  - name: Door A lock (RS485)
+    slave: 60
+    address: 0
+    write_type: coil
+    verify:
+      input_type: coil
+      address: 0
+sensors:
+  - name: Door A lock state (RS485)
+    slave: 60
+    address: 2
+    input_type: holding
+    scan_interval: 5
+```
 
-- **Base:** board `esp32-c3-devkitm-1`, framework `esp-idf`, logger on `USB_SERIAL_JTAG` (UART0
-  stays free for RS485).
-- **Doors:** two instances of `packages/door.yaml`, with pins per the table above and INA219
-  addresses `0x40` and `0x44`. The package's optional position switches and button are not on this
-  board. Move them into a separate package included only by variant B, and replace their one use
-  in `move_actuator` with globals.
-- **Door contacts:** a `binary_sensor` (`device_class: door`) per door, inverted when the contact
-  is NC, plus an option to refuse locking while the door is open.
-- **Status LED:** `esp32_rmt_led_strip` on GPIO2, GRB order.
-- **No reboot without Wi-Fi:** `wifi: reboot_timeout: 0s` and `api: reboot_timeout: 0s`. The
-  defaults reboot after 15 minutes without Wi-Fi or without Home Assistant, which would also cut
-  RS485 control.
-- **Modbus:** the registers above.
+A template lock can call `modbus.write_register` with command 1 or 2 instead.
+
+## Firmware
+
+[`door_lock_c.yaml`](../../door_lock_c.yaml) (repo root). It reuses the per-door packages:
+
+| Package | Per door | What |
+|---|---|---|
+| `packages/door.yaml` | yes | Variant A's state machine: INA219 at 20 Hz, stall/idle/timeout, back-off, thresholds as HA numbers |
+| `packages/door_contact.yaml` | yes | The door contact: "Door A door" (device class door), "use door contact" (off by default), "contact closed when shut" (on by default) |
+
+Variant B's position switches and buttons moved out of `door.yaml` into
+`packages/door_switches.yaml`, which only variant B includes. `door.yaml` now only reads three
+globals that those packages write (`_at_locked`, `_at_unlocked`, `_lock_inhibit`).
+
+- **Base:** board `esp32-c3-devkitm-1`, framework `esp-idf`, ESPHome 2026.8 or newer. The logger
+  runs on `USB_SERIAL_JTAG`, so UART0 (IO20/IO21) is free for RS485.
+- **Doors:** "Door A" (IO4 unlock, IO3 lock, INA219 0x40, contact IO1) and "Door B" (IO5, IO6,
+  0x44, contact IO0). Every per-door entity of variant A exists once per door.
+- **Door contact:** while "use door contact" is on, a lock command for an open door is refused,
+  from HA and from Modbus alike, and the last result reads "refused - door open". The jog buttons
+  (commissioning only, disabled by default) bypass it, as they bypass all protection.
+- **No reboot without Wi-Fi or Home Assistant:** `reboot_timeout: 0s` on both `wifi` and `api`.
+  The defaults reboot after 15 minutes, which would also interrupt RS485 control.
+- **Status LED (IO2):**
+  - red: a fault is latched
+  - white: a door is moving
+  - amber: no Wi-Fi
+  - dim green: all quiet
+  - green flash: a move finished
+- **Extra entities:** supply voltage (door A's INA219), Wi-Fi signal, uptime.
+- **Checked:** `esphome config` passes for variants A, B and C on ESPHome 2026.10.2, and variant C
+  compiles. Not yet run on hardware.
 
 ## Design notes
 
@@ -300,7 +335,8 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
 4. Actuators off: each door's motor current should read a few mA at most.
 5. Connect each actuator and run variant A's commissioning per door (jog to check direction, then
    a full stroke for the travel times).
-6. Door contacts: open and close each door and watch its binary sensor.
+6. Door contacts: turn on "use door contact", then open and close each door and watch its door
+   sensor. Flip "contact closed when shut" if it reads the wrong way round.
 7. RS485: connect to a gateway, set the bus address, fit the TERM cap if the board ends the bus, and
    read register 2 from Home Assistant or `tools/modbus_addressing.py read` on the addressing hub.
 

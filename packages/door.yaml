@@ -1,19 +1,24 @@
 # =============================================================================
-#  packages/door.yaml — one door's worth of variant B
+#  packages/door.yaml — one door's state machine (variants B and C)
 #
-#  Included once per door from door_lock_b.yaml via `packages:` + `vars:`.
-#  The state machine is identical to variant A (door_lock_a.yaml); every id
-#  and entity name is prefixed so four instances coexist on one ESP.
+#  Included once per door via `packages:` + `vars:`. The state machine is
+#  identical to variant A (door_lock_a.yaml); every id and entity name is
+#  prefixed so several instances coexist on one ESP.
 #
 #  Required vars:
 #    door             id prefix, e.g. d1
 #    door_friendly    entity name prefix, e.g. "Door 1"
 #    pin_in1          DRV8871 IN1 -> drives towards UNLOCKED
 #    pin_in2          DRV8871 IN2 -> drives towards LOCKED
-#    pin_sw_locked    optional reed/limit switch, bolt fully LOCKED
-#    pin_sw_unlocked  optional reed/limit switch, bolt fully UNLOCKED
-#    pin_button       optional local push-button (toggle)
 #    ina_address      this door's INA219 (0x40 / 0x41 / 0x44 / 0x45)
+#
+#  Optional companions, included with the same `door` var:
+#    packages/door_switches.yaml  bolt position switches + local button (variant B)
+#    packages/door_contact.yaml   wired magnetic door contact (variant C)
+#  They talk to this package only through the globals ${door}_at_locked,
+#  ${door}_at_unlocked and ${door}_lock_inhibit, which stay false without them.
+#
+#  The main config provides `status_led` (light) and `led_update` (script).
 #
 #  Threshold defaults below match variant A; each door has its own set of
 #  Home Assistant number entities, so per-door tuning happens there, in flash,
@@ -29,6 +34,22 @@ globals:
     type: int
     restore_value: true
     initial_value: '0'
+
+  # Written by packages/door_switches.yaml: a trusted switch says the bolt is
+  # already at that end (only while "use position switches" is on).
+  - id: ${door}_at_locked
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: ${door}_at_unlocked
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  # Written by packages/door_contact.yaml: refuse lock commands (door open).
+  - id: ${door}_lock_inhibit
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
   - id: ${door}_mv_running        # a commanded move is in progress
     type: bool
@@ -278,83 +299,11 @@ number:
     entity_category: config
     mode: box
 
-switch:
-  # Turn this on only after this door's SW-L/SW-U are actually fitted.
-  - platform: template
-    name: "${door_friendly} use position switches"
-    id: ${door}_cfg_use_switches
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
-    entity_category: config
-
 # =============================================================================
-#  optional position feedback / local button
+#  fault flag (position switches and the local button live in
+#  packages/door_switches.yaml)
 # =============================================================================
 binary_sensor:
-  - platform: gpio
-    id: ${door}_sw_locked
-    name: "${door_friendly} bolt locked switch"
-    entity_category: diagnostic
-    disabled_by_default: true
-    pin:
-      number: ${pin_sw_locked}
-      mode:
-        input: true
-        pullup: true
-      inverted: true          # switch to GND = closed = true
-    filters:
-      - delayed_on_off: 30ms
-    on_press:
-      - if:
-          condition:
-            switch.is_on: ${door}_cfg_use_switches
-          then:
-            - lambda: |-
-                if (id(${door}_mv_running) && !id(${door}_mv_unlock)) {
-                  id(${door}_mv_outcome) = 1;
-                  id(${door}_mv_running) = false;
-                }
-
-  - platform: gpio
-    id: ${door}_sw_unlocked
-    name: "${door_friendly} bolt unlocked switch"
-    entity_category: diagnostic
-    disabled_by_default: true
-    pin:
-      number: ${pin_sw_unlocked}
-      mode:
-        input: true
-        pullup: true
-      inverted: true
-    filters:
-      - delayed_on_off: 30ms
-    on_press:
-      - if:
-          condition:
-            switch.is_on: ${door}_cfg_use_switches
-          then:
-            - lambda: |-
-                if (id(${door}_mv_running) && id(${door}_mv_unlock)) {
-                  id(${door}_mv_outcome) = 1;
-                  id(${door}_mv_running) = false;
-                }
-
-  - platform: gpio
-    id: ${door}_local_button
-    internal: true
-    pin:
-      number: ${pin_button}
-      mode:
-        input: true
-        pullup: true
-      inverted: true
-    filters:
-      - delayed_on: 40ms
-    on_press:
-      - script.execute:
-          id: ${door}_cmd
-          unlock: !lambda 'return id(${door}_lock_state) != 2;'
-
   - platform: template
     name: "${door_friendly} fault"
     id: ${door}_lock_fault
@@ -411,6 +360,7 @@ button:
 
   - platform: template
     name: "${door_friendly} clear fault"
+    id: ${door}_btn_clear
     entity_category: config
     on_press:
       - binary_sensor.template.publish:
@@ -488,19 +438,33 @@ script:
     parameters:
       unlock: bool
     then:
-      - script.stop: ${door}_move_actuator
-      - script.stop: ${door}_finish_fault
-      - script.stop: ${door}_finish_ok
-      - script.stop: ${door}_energize
-      - script.stop: ${door}_jog_unlock
-      - script.stop: ${door}_jog_lock
-      - script.execute: ${door}_coast
-      - script.wait: ${door}_coast
-      - lambda: 'id(${door}_mv_running) = false;'
-      - delay: 200ms
-      - script.execute:
-          id: ${door}_move_actuator
-          unlock: !lambda 'return unlock;'
+      - if:
+          condition:
+            lambda: 'return !unlock && id(${door}_lock_inhibit);'
+          then:
+            # The door contact says the door is open: a bolt thrown now would
+            # hit the frame when the door closes. Leave the bolt where it is.
+            - text_sensor.template.publish:
+                id: ${door}_last_result
+                state: "refused - door open"
+            - script.execute: ${door}_publish_lock_state
+            - logger.log:
+                level: WARN
+                format: "${door_friendly}: lock refused, the door is open"
+          else:
+            - script.stop: ${door}_move_actuator
+            - script.stop: ${door}_finish_fault
+            - script.stop: ${door}_finish_ok
+            - script.stop: ${door}_energize
+            - script.stop: ${door}_jog_unlock
+            - script.stop: ${door}_jog_lock
+            - script.execute: ${door}_coast
+            - script.wait: ${door}_coast
+            - lambda: 'id(${door}_mv_running) = false;'
+            - delay: 200ms
+            - script.execute:
+                id: ${door}_move_actuator
+                unlock: !lambda 'return unlock;'
 
   # --- the move ------------------------------------------------------------
   - id: ${door}_move_actuator
@@ -511,10 +475,8 @@ script:
       # Short-circuit if trusted switches already say we are there.
       - if:
           condition:
-            and:
-              - switch.is_on: ${door}_cfg_use_switches
-              - lambda: |-
-                  return unlock ? id(${door}_sw_unlocked).state : id(${door}_sw_locked).state;
+            lambda: |-
+              return unlock ? id(${door}_at_unlocked) : id(${door}_at_locked);
           then:
             - lambda: 'id(${door}_lock_state) = unlock ? 2 : 1;'
             - script.execute: ${door}_publish_lock_state

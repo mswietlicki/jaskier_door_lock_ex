@@ -5,16 +5,17 @@ ESPHome door lock for Home Assistant: an ESP32 drives a **DRV8871** H-bridge int
 End of travel *and* obstructions are both detected from that current — no extra sensors.
 Powered from a 4S LiFePO₄ pack via an **MH-MINI-360** buck.
 
-Two variants share the same per-door state machine:
+Three variants share the same per-door state machine:
 
 | Variant | Config | ESP | Doors |
 |---|---|---|---|
 | **A** | `door_lock_a.yaml` | ESP32-C3-Zero (Waveshare) | 1 |
 | **B** | `door_lock_b.yaml` | ESP32-S3-DevKitC-1 | 4, fully independent, one board |
-| **C** | [`hardware/door-lock-c/`](hardware/door-lock-c/README.md) (firmware to follow) | ESP32-C3 SuperMini, socketed | 2, on a hand-assembled JLCPCB board with door contacts and optional RS485 (Modbus RTU) |
+| **C** | `door_lock_c.yaml` + [`hardware/door-lock-c/`](hardware/door-lock-c/README.md) | ESP32-C3 SuperMini, socketed | 2, on a hand-assembled JLCPCB board with door contacts and optional RS485 (Modbus RTU) |
 
 Everything below describes variant A; [Variant B](#variant-b--four-doors-one-board)
-documents only what differs (pins, addresses, BOM, power).
+documents only what differs (pins, addresses, BOM, power). Variant C is documented with its
+board in [`hardware/door-lock-c/README.md`](hardware/door-lock-c/README.md).
 
 | | |
 |---|---|
@@ -31,7 +32,10 @@ documents only what differs (pins, addresses, BOM, power).
 hardware/door-lock-c/        variant C - two-door PCB (KiCad 10, JLCPCB files, generator scripts)
 door_lock_a.yaml             variant A - single door on an ESP32-C3-Zero
 door_lock_b.yaml             variant B - four doors on an ESP32-S3-DevKitC-1
-packages/door.yaml           one door's state machine, included 4x by variant B
+door_lock_c.yaml             variant C - two doors, door contacts, Modbus RTU on RS485
+packages/door.yaml           one door's state machine (variants B and C)
+packages/door_switches.yaml  one door's position switches + button (variant B)
+packages/door_contact.yaml   one door's wired magnetic contact (variant C)
 secrets.yaml.example         copy to secrets.yaml and fill in
 docs/wiring.html             full illustrated build document for variant A
 docs/wiring_b.html           full illustrated build document for variant B
@@ -438,7 +442,8 @@ automation:
 
 `door_lock_b.yaml` runs **four fully independent doors** from one ESP and one perfboard.
 Each door is a verbatim copy of the variant A state machine (factored out into
-`packages/door.yaml` and included four times), so everything above — move outcomes,
+`packages/door.yaml` and included four times, with its position switches and button in
+`packages/door_switches.yaml`), so everything above — move outcomes,
 thresholds, jam handling, commissioning — applies per door. Doors never wait on each
 other; any or all four can move at once. A "close all" in Home Assistant is simply a
 script/automation that calls `lock.lock` on all four entities.
