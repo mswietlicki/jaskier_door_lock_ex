@@ -7,7 +7,8 @@ RS485 port lets Home Assistant lock and unlock over Modbus RTU through the van's
 when Wi-Fi is down. It is a bare JLCPCB board with parts from LCSC, assembled by hand, and is
 ordered together with the CAN-B node (jaskier repo, `hardware/canb-node`).
 
-**Status: designed 5 November 2026, not ordered, not built, not tested.** Firmware:
+**Status: designed 5 November 2026, boards and parts ordered 5–6 November 2026 (see
+[Ordering](#ordering)), not built, not tested.** Firmware:
 [`door_lock_c.yaml`](../../door_lock_c.yaml), see [Firmware](#firmware). KiCad 10 project: ERC 0 violations, DRC 0
 violations, 0 unconnected, schematic and board in parity.
 
@@ -294,24 +295,37 @@ CAN-B node and the RS485 tee (jaskier repo, `hardware/rs485-tee`).
 
   The CAN-B node's TJA1055T/3 is the scarce part: 9 at LCSC, as at JLCPCB. Do not substitute the
   plain TJA1055T (CAN-B README).
-- **CAN-B:** its README records an order with JLCPCB assembly on 5 November 2026 (batch
-  W2026110523426514). If that order changes to bare boards, update its README the same way.
-- **Prepared 5 November 2026, not yet paid:**
-  - **LCSC cart** "Jaskier door lock C + CAN-B + RS485 tee": 41 lines, $80.08 less a $5.57
-    discount, plus $16.81 shipping to Poland. Total $91.32.
-  - **JLCPCB cart**, all lead-free HASL, green, 1.6 mm:
+- **Ordered 5–6 November 2026,** for 3 door-lock-c boards, 2 CAN-B nodes and 10 RS485 tees, all
+  assembled by hand:
+  - **JLCPCB W2026110603218840** (5 November), all lead-free HASL, green, 1.6 mm, customs
+    prepaid:
 
-    | Item | Price |
-    |---|---|
-    | door-lock-c, 5 PCBs | €4.62 |
-    | door-lock-c stencil, top, 380 × 280 mm, no frame | €6.41 |
-    | CAN-B node, 5 PCBs | €4.62 |
-    | RS485 tee, 10 PCBs | €5.59 |
-    | Shipping, estimate (DHL) | €27.13 |
-    | **Total** | **€48.37** |
+    | Item | JLCPCB # | Price |
+    |---|---|---|
+    | door-lock-c, 5 PCBs | Y5 | $5.22 |
+    | door-lock-c stencil, top, 380 × 280 mm, no frame | SO12611060162 | $7.30 |
+    | CAN-B node, 5 PCBs | Y8 | $5.21 |
+    | RS485 tee, 10 PCBs | Y7 | $6.32 |
+    | Shipping | | $31.60 |
+    | Customs duties and taxes, prepaid | | $26.49 |
+    | Duty and tax disbursement fee | | $8.42 |
+    | **Total** | | **$90.56** |
 
+  - **LCSC WM2611060105** (6 November), cart "Jaskier door lock C + CAN-B + RS485 tee", 41 lines
+    from `jlcpcb/lcsc-order.csv`: $80.08 less a $5.57 discount, $19.51 shipping (4PX, 3–9 days)
+    and a $39.20 tariff (import VAT and EU duty, prepaid). Total $133.22. UPS, DHL and FedEx were
+    cheaper at checkout but carry no tariff line: the courier collects VAT, duty and a clearance
+    fee at the door, which made them dearer in the end.
   - **Left out to save money:** ENIG (+€15.27 per design) and a CAN-B stencil. The stencil adds
     €6.41 and about 0.8 kg, which doubled the shipping estimate.
+  - **CAN-B:** the earlier order with JLCPCB assembly (batch W2026110523426514) was cancelled for
+    these bare boards.
+  - **Buying in Poland instead** was checked on 5 November 2026. TME stocks nearly every line, but
+    not the DRV8871DDAR, and sells the TJA1055T/3 only by the 2,500-piece reel. TME plus Mouser
+    for those two came to about 610–700 zł with VAT and shipping, against 521 zł at LCSC. TME plus
+    AliExpress came to about 420 zł, with a risk of fake DRV8871s and of plain TJA1055Ts sold as
+    /3. The cost difference is in the ICs, the K7805 module (TME: Recom R-78E5.0-0.5) and the
+    terminal blocks (Phoenix PT at TME instead of the Dorabo clones).
 - `python.exe tools/jlcpcb.py --cpl` still writes a JLCPCB placement file, in case a later batch is
   assembled by JLCPCB. Its rotations follow the CAN-B rule and were never checked in JLCPCB's
   preview.
