@@ -261,15 +261,21 @@ globals that those packages write (`_at_locked`, `_at_unlocked`, `_lock_inhibit`
 Bare boards from JLCPCB, parts from LCSC, assembled by hand. One order covers this board, the
 CAN-B node and the RS485 tee (jaskier repo, `hardware/rs485-tee`).
 
-- **PCB:** `jlcpcb/door-lock-c-gerbers.zip`, 2 layers, 1.6 mm, 1 oz. ENIG keeps the 0.65 mm
-  INA219 pads flat. HASL works too. No assembly, so no edge rails and no placement file are
+- **PCB:** `jlcpcb/door-lock-c-gerbers.zip`, 2 layers, 1.6 mm, 1 oz, lead-free HASL. ENIG would keep the 0.65 mm
+  INA219 pads flatter, but costs €15 more. No assembly, so no edge rails and no placement file are
   needed.
 - **Stencil (optional):** a top-side SMT stencil from the same zip (the F.Paste layer), worth it
   with a hot plate or hot air. Add it to the same JLCPCB cart.
-- **Parts:** `jlcpcb/lcsc-order.csv` is one LCSC order for 2 door-lock-c boards, 2 CAN-B nodes and
-  5 RS485 tees, with spares (+20 % or at least 2 for chip passives, +1 for the rest), including the
-  TERM jumper caps. Load it in LCSC's BOM tool (columns LCSC Part Number, Quantity). LCSC rounds each line up
-  to its minimum order. For other counts: `python tools/lcsc_order.py --door N --canb M --tee K`.
+- **Parts:** `jlcpcb/lcsc-order.csv` is one LCSC order for 3 door-lock-c boards, 2 CAN-B nodes and
+  10 RS485 tees, with spares (+20 % or at least 2 for chip passives, +1 for the rest), including the
+  TERM jumper caps. For other counts: `python tools/lcsc_order.py --door N --canb M --tee K`.
+  - **Substitutions:** when LCSC runs out of a BOM part, `SUBSTITUTE` in the script buys an
+    equivalent. On 5 November 2026 these were C1591 for the 100 nF (C14663, 50 left) and C1589 for
+    CAN-B's 10 nF (C57112, none), both Samsung, X7R, 50 V, 0603.
+  - **Loading it:** LCSC's BOM tool, "Copy & Paste", one `C-number, quantity` per line. It keeps the
+    part numbers but sets every requested quantity to 1. Set the lines whose need is above LCSC's
+    minimum order by hand (filter the table by part number, then re-tick Select All). LCSC rounds
+    each line up to its minimum.
 - **Stock on LCSC, 5 November 2026:**
 
   | Part | LCSC | Stock |
@@ -290,6 +296,22 @@ CAN-B node and the RS485 tee (jaskier repo, `hardware/rs485-tee`).
   plain TJA1055T (CAN-B README).
 - **CAN-B:** its README records an order with JLCPCB assembly on 5 November 2026 (batch
   W2026110523426514). If that order changes to bare boards, update its README the same way.
+- **Prepared 5 November 2026, not yet paid:**
+  - **LCSC cart** "Jaskier door lock C + CAN-B + RS485 tee": 41 lines, $80.08 less a $5.57
+    discount, plus $16.81 shipping to Poland. Total $91.32.
+  - **JLCPCB cart**, all lead-free HASL, green, 1.6 mm:
+
+    | Item | Price |
+    |---|---|
+    | door-lock-c, 5 PCBs | €4.62 |
+    | door-lock-c stencil, top, 380 × 280 mm, no frame | €6.41 |
+    | CAN-B node, 5 PCBs | €4.62 |
+    | RS485 tee, 10 PCBs | €5.59 |
+    | Shipping, estimate (DHL) | €27.13 |
+    | **Total** | **€48.37** |
+
+  - **Left out to save money:** ENIG (+€15.27 per design) and a CAN-B stencil. The stencil adds
+    €6.41 and about 0.8 kg, which doubled the shipping estimate.
 - `python.exe tools/jlcpcb.py --cpl` still writes a JLCPCB placement file, in case a later batch is
   assembled by JLCPCB. Its rotations follow the CAN-B rule and were never checked in JLCPCB's
   preview.
@@ -373,7 +395,7 @@ kicad-cli sch export netlist -o netlist.net door-lock-c.kicad_sch
 ```
 
 ```bash
-python tools/lcsc_order.py --door 2 --canb 2 --tee 5
+python tools/lcsc_order.py --door 3 --canb 2 --tee 10
 ```
 
 Regenerating overwrites hand edits made in KiCad. Routing takes about two minutes.

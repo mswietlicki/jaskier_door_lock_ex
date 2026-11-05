@@ -1,7 +1,7 @@
 """One LCSC parts order for hand-assembling door-lock-c boards, CAN-B nodes and RS485 tees.
 
 Run with any Python 3 from the project directory:
-    python tools/lcsc_order.py [--door 2] [--canb 2] [--tee 5] [--out jlcpcb/lcsc-order.csv]
+    python tools/lcsc_order.py [--door 3] [--canb 2] [--tee 10] [--out jlcpcb/lcsc-order.csv]
 
 Reads the three boards' bom.csv files (this one, the jaskier repo's hardware/canb-node and
 hardware/rs485-tee), multiplies by the number of boards, merges equal LCSC numbers and adds
@@ -13,6 +13,11 @@ import argparse, csv, math, os
 
 JASKIER = os.path.join('C:\\', 'Code', 'jaskier', 'hardware')
 CAP = ('C100114', 'Jumper cap 2.54 mm, closed (TERM 120R)', 'P=2.54mm')
+# BOM part -> part to buy instead, when LCSC runs out (same value, package and rating)
+SUBSTITUTE = {
+    'C57112': ('C1589', '10n 50V X7R (Samsung CL10B103KB8NNNC, for C57112: 0 at LCSC on 5 Nov 2026)'),
+    'C14663': ('C1591', '100n 50V X7R (Samsung CL10B104KB8NNNC, for C14663: 50 at LCSC on 5 Nov 2026)'),
+}
 PASSIVE = ('R_0603', 'C_0603', 'C_0805', 'C_1206', 'R_1206', 'LED_0603')
 
 
@@ -24,7 +29,10 @@ def read(path, extra=()):
             if not lcsc:
                 continue
             n = len([d for d in r['Designator'].split(',') if d.strip()])
-            c, p, k = rows.get(lcsc, (r['Comment'], r['Footprint'], 0))
+            comment = r['Comment']
+            if lcsc in SUBSTITUTE:
+                lcsc, comment = SUBSTITUTE[lcsc]
+            c, p, k = rows.get(lcsc, (comment, r['Footprint'], 0))
             rows[lcsc] = (c, p, k + n)
     for lcsc, c, p, n in extra:
         rows[lcsc] = (c, p, n)
@@ -34,9 +42,9 @@ def read(path, extra=()):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
-    ap.add_argument('--door', type=int, default=2, help='door-lock-c boards to build')
+    ap.add_argument('--door', type=int, default=3, help='door-lock-c boards to build')
     ap.add_argument('--canb', type=int, default=2, help='CAN-B nodes to build')
-    ap.add_argument('--tee', type=int, default=5, help='RS485 tees to build')
+    ap.add_argument('--tee', type=int, default=10, help='RS485 tees to build')
     ap.add_argument('--canb-bom', default=os.path.join(JASKIER, 'canb-node', 'jlcpcb', 'bom.csv'))
     ap.add_argument('--tee-bom', default=os.path.join(JASKIER, 'rs485-tee', 'jlcpcb', 'bom.csv'))
     ap.add_argument('--out', default=os.path.join(here, '..', 'jlcpcb', 'lcsc-order.csv'))
