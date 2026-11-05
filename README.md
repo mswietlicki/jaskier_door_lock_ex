@@ -11,6 +11,7 @@ Two variants share the same per-door state machine:
 |---|---|---|---|
 | **A** | `door_lock_a.yaml` | ESP32-C3-Zero (Waveshare) | 1 |
 | **B** | `door_lock_b.yaml` | ESP32-S3-DevKitC-1 | 4, fully independent, one board |
+| **C** | [`hardware/door-lock-c/`](hardware/door-lock-c/README.md) (firmware to follow) | ESP32-C3 SuperMini, socketed | 2, on a hand-assembled JLCPCB board with door contacts and optional RS485 (Modbus RTU) |
 
 Everything below describes variant A; [Variant B](#variant-b--four-doors-one-board)
 documents only what differs (pins, addresses, BOM, power).
@@ -27,6 +28,7 @@ documents only what differs (pins, addresses, BOM, power).
 ## Repository layout
 
 ```
+hardware/door-lock-c/        variant C - two-door PCB (KiCad 10, JLCPCB files, generator scripts)
 door_lock_a.yaml             variant A - single door on an ESP32-C3-Zero
 door_lock_b.yaml             variant B - four doors on an ESP32-S3-DevKitC-1
 packages/door.yaml           one door's state machine, included 4x by variant B

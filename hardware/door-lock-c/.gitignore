@@ -1,0 +1,13 @@
+# KiCad local and transient files
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.lck
+~*
+__pycache__/
+# generated while building, not part of the design
+netlist.net
+*-nofill.kicad_pcb
+erc.rpt
+drc.rpt
+jlcpcb/gerbers/
