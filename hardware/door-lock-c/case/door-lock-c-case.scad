@@ -67,6 +67,15 @@ led_window = 0;         // > 0 closes the hole with a skin this thick (print the
 wire_z0 = 1.0;          // cable windows, above the board top face; wire entries are at 3.3-5.4 mm
 wire_z1 = 7.6;
 
+/* [Cooling slits] */
+// in the side walls, long side out from the wall: the low ones let air in, the high ones let it
+// out (with the cable windows). Not in the top wall, where dust and drips would fall in.
+vent_w = 1.6;
+vent_pitch = 3.6;
+vent_z = [11.5, 23.0];      // from the back face: above the board (9.6), below the lid's lip (25.1); pointed end, no bridge
+vent_left = [[3, 17], [34.5, 46]];    // y ranges; the 12V window is above the high group
+vent_right = [[3, 17], [34.5, 62]];   // the lid blocks and screws are at y 20-32
+
 $fn = 48;
 e = 0.01;
 
@@ -161,6 +170,9 @@ module base() {
         // resin mark on the back, read from behind
         if (resin_abbr != "")
             translate([pcb_w / 2, pcb_h / 2, -1]) linear_extrude(1 + 0.6) mirror([1, 0]) resin_mark();
+        // cooling slits through the side walls
+        for (s = [[out0[0] - 1, vent_left], [in1[0] - 1, vent_right]], r = s[1], y = slit_ys(r))
+            translate([s[0], y, 0]) rotate([90, 0, 90]) linear_extrude(wall + 2) slit2d();
         // condensation drain at the floor
         translate([drain[0], out0[1] - 1, floor_t]) cube([drain[1] - drain[0], wall + 2, 2]);
         // lid screws through the side walls
@@ -168,6 +180,17 @@ module base() {
             translate([x, lid_screw_y, top_z + lid_screw_dz])
                 hole_x(lid_screw_clear, wall + 2);
     }
+}
+
+// centres of the slits that fit in the y range r, centred in it
+function slit_ys(r) = let (n = floor((r[1] - r[0] - vent_w) / vent_pitch) + 1,
+                           y0 = (r[0] + r[1]) / 2 - (n - 1) * vent_pitch / 2)
+    [for (i = [0 : 1 : n - 1]) y0 + i * vent_pitch];
+
+// one slit in the wall plane: u along the wall (y), v out from the wall (z), pointed outer end
+module slit2d() {
+    polygon([[-vent_w / 2, vent_z[0]], [vent_w / 2, vent_z[0]], [vent_w / 2, vent_z[1] - vent_w / 2],
+             [0, vent_z[1]], [-vent_w / 2, vent_z[1] - vent_w / 2]]);
 }
 
 // side wall outer face, outward direction and hole centre of each ear

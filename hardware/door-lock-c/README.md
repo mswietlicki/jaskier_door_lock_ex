@@ -397,7 +397,7 @@ the left wall. Two side screws hold the lid. Designed 6 November 2026, not print
 - **Print:** in PETG. PLA softens at about 55 °C, and a parked van gets hotter than that in summer.
   - Settings: 0.2 mm layers, 3 perimeters, 20 % infill, no supports.
   - Orientation: the base on its back, the lid on its top face (the engraved labels face the bed).
-  - PrusaSlicer's estimate (generic printer profile): base 32.7 g and 2 h 53 min, lid 16.0 g and
+  - PrusaSlicer's estimate (generic printer profile): base 31.8 g and 3 h 14 min, lid 16.0 g and
     1 h 58 min.
   - PrusaSlicer warns of low bed adhesion on both parts and long bridges on the lid. Both come
     from the text engraved in the faces on the bed: the letters' insides start as small islands,
@@ -442,6 +442,15 @@ the left wall. Two side screws hold the lid. Designed 6 November 2026, not print
 - **LED:** a 3 mm hole and a tube down to the status LED. `led_window = 0.4` closes the hole with a
   thin skin, which the LED shines through if the lid is a light filament.
 - **Drain:** a 3 × 2 mm slot in the bottom wall at the floor, for condensation.
+- **Cooling slits:** 19 slits, each 1.6 × 11.5 mm, in the side walls above the board.
+  - Each side has a low group at the bottom (4 slits), where air comes in with the cable windows.
+    It has a high group too, where warm air goes out: 3 slits on the left under the 12V window,
+    next to PS1, and 8 on the right.
+  - They keep clear of the lid blocks and screws (y 20–32) and stay below the lid's lip.
+  - The top wall has none, so dust and drips can't fall onto the SuperMini.
+  - Each slit's end toward the lid is pointed, so the slits print without bridges.
+  - `vent_left`, `vent_right`, `vent_w`, `vent_pitch` and `vent_z` set them; `vent_left = []`
+    closes that side.
 - **Labels:** engraved in the lid:
   - DOOR A, DOOR B and RS485 above the windows, and 12V by the power window.
   - The name in the middle, "DOOR LOCK" over "JASKIER" (`name` and `name_size`; one line at the
