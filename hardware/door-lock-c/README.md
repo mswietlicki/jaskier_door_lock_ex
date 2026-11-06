@@ -376,6 +376,88 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
 7. RS485: connect to a gateway, set the bus address, fit the TERM cap if the board ends the bus, and
    read register 2 from Home Assistant or `tools/modbus_addressing.py read` on the addressing hub.
 
+## Case
+
+![Case, closed](docs/case-closed.png)
+
+The Door Lock Jaskier: a 3D-printed wall box for the board, 85 × 69 × 29 mm, in two parts. It
+hangs with the terminals at the bottom.
+The door A, door B and RS485 wires come in through windows in the bottom wall, and power through
+the left wall. Two side screws hold the lid. Designed 6 November 2026, not printed yet.
+
+| Open, with the board | Lid, inside |
+|---|---|
+| ![Open, with the board](docs/case-open.png) | ![Lid from the inside](docs/case-lid-inside.png) |
+
+- **Files:**
+  - `case/door-lock-c-case.scad`: OpenSCAD source, parametric. Tested with OpenSCAD 2021.01.
+  - `case/stl/door-lock-c-case-base.stl` and `case/stl/door-lock-c-case-lid.stl`: both in print
+    orientation.
+- **Print:** in PETG. PLA softens at about 55 °C, and a parked van gets hotter than that in summer.
+  - Settings: 0.2 mm layers, 3 perimeters, 20 % infill, no supports.
+  - Orientation: the base on its back, the lid on its top face (the engraved labels face the bed).
+  - PrusaSlicer's estimate (generic printer profile): base 31.6 g and 2 h 33 min, lid 16.5 g and
+    1 h 50 min.
+- **Hardware per case:**
+  - Board: 4 × M3 × 8 screws into the standoffs. They cut their own thread in the 2.7 mm holes.
+    For M3 heat-set inserts, set `pcb_screw_hole = 4.0`.
+  - Lid: 2 × M3 × 8 screws, one through each side wall into the lid's blocks (2.6 mm pilot holes).
+  - Wall: 2 to 4 countersunk screws, 3.5–4 mm, heads up to 8.4 mm. Two diagonal holes are enough.
+- **Mounting:**
+  1. Screw the empty base to the wall, windows down. The wall holes are under the board.
+  2. Screw the board in.
+  3. Wire it with the lid off:
+     - Push each stripped wire through its window into its terminal, then tighten the terminal
+       from the top.
+     - The case has no strain relief, so tie the cables to the wall just below the box.
+  4. Flash the SuperMini and plug it in. Its USB-C faces into the board and can't be reached with
+     the lid on.
+  5. Fit the TERM cap if the board ends the bus.
+  6. Fit the lid and its 2 side screws.
+- **Fit:**
+  - `python case/case_fit.py` exports the board from KiCad and the case from OpenSCAD, then
+    measures the clearances. It needs trimesh, rtree and manifold3d.
+  - Results on 6 November 2026, nothing touching:
+
+    | Between | Clearance |
+    |---|---|
+    | Board edge and walls | 0.5 mm |
+    | Parts and lid | 1.3 mm or more (the closest is C12, a 1206 capacitor under the left lid block) |
+    | Plugged-in SuperMini and lid | 1.9 mm to the header pin tips, 2.2 mm to the USB-C socket |
+    | SuperMini antenna end and top wall | 0.7 mm |
+    | Pins under the board and floor | 2.2 mm |
+    | Wires from the terminal entries and window edges | 1.5 mm |
+
+  - The SuperMini is not in the KiCad model. The check uses boxes for it, with the module's
+    underside 11.1 mm above the board: the 8.6 mm socket plus the 2.5 mm header plastic. If the
+    module's headers sit higher, it can reach the lid. `top_clear` sets that space.
+- **LED:** a 3 mm hole and a tube down to the status LED. `led_window = 0.4` closes the hole with a
+  thin skin, which the LED shines through if the lid is a light filament.
+- **Drain:** a 3 × 2 mm slot in the bottom wall at the floor, for condensation.
+- **Labels:** engraved in the lid:
+  - DOOR A, DOOR B and RS485 above the windows, and 12V by the power window.
+  - The name in the middle, "DOOR LOCK" over "JASKIER" (`name` and `name_size`; one line at the
+    same size would be wider than the lid).
+  - `label`, a smaller line under the name, per box: for example `-D 'label="BACK DOOR"'`. Empty by
+    default.
+- **Not covered:**
+  - J7, the extension header, has no opening: drill one where its cable needs it.
+  - The USB-C port: take the lid off.
+
+Regenerate from this directory:
+
+```bash
+openscad -D 'part="base"' -o case/stl/door-lock-c-case-base.stl case/door-lock-c-case.scad
+```
+
+```bash
+openscad -D 'part="lid"' -o case/stl/door-lock-c-case-lid.stl case/door-lock-c-case.scad
+```
+
+```bash
+python case/case_fit.py
+```
+
 ## Files
 
 | Path | What |
@@ -389,6 +471,7 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
 | `tools/gen_pcb.py`, `tools/router.py` | Build and route the board (KiCad's `python.exe`): placement from `layout.py`, then a two-layer A* grid router (0.1 mm grid, clearance-aware, bends and vias cost extra), GND vias, stitching, pours |
 | `tools/jlcpcb.py` | Gerbers, drills, BOM, assembly drawing; `--cpl` for a JLCPCB placement file (KiCad's `python.exe`) |
 | `tools/lcsc_order.py` | One LCSC order for door-lock-c boards, CAN-B nodes and RS485 tees (any Python 3) |
+| `case/` | 3D-printed wall case: OpenSCAD source, STLs, fit check (see [Case](#case)) |
 
 Regenerate everything from the project directory:
 
