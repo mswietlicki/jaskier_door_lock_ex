@@ -17,6 +17,10 @@ part = "assembly";      // [base, lid, assembly, open, exploded, base_fit, lid_f
 name = ["DOOR LOCK", "JASKIER"];   // engraved in the middle of the lid, top line first; [] for none
 name_size = [5, 7];                // both lines come out 41 mm wide
 label = "";             // per box, a smaller line under the name, e.g. "BACK DOOR"
+// resin code (ASTM D7611): PETG is 7, "other", not 1: it melts lower than PET and spoils PET recycling.
+// Engraved on the back of the base and inside the lid; resin_abbr = "" for no mark.
+resin_code = "7";
+resin_abbr = "PETG";
 board_stl = "";         // KiCad STL of the board, for the assembly views only
 
 /* [Board] */
@@ -154,6 +158,9 @@ module base() {
         for (w = left_windows)
             translate([out0[0] - 1, w[0], top_z + wire_z0])
                 cube([wall + 2, w[1] - w[0], wire_z1 - wire_z0]);
+        // resin mark on the back, read from behind
+        if (resin_abbr != "")
+            translate([pcb_w / 2, pcb_h / 2, -1]) linear_extrude(1 + 0.6) mirror([1, 0]) resin_mark();
         // condensation drain at the floor
         translate([drain[0], out0[1] - 1, floor_t]) cube([drain[1] - drain[0], wall + 2, 2]);
         // lid screws through the side walls
@@ -213,6 +220,9 @@ module lid() {
             cylinder(d = led_hole + 0.6, h = wall_top - top_z - 3.5 + 1);
         translate([led[0], led[1], wall_top - 1])
             cylinder(d = led_hole, h = led_window > 0 ? lid_t + 1 - led_window : lid_t + 2);
+        // resin mark inside, read with the lid turned over; clear of the blocks and the front labels
+        if (resin_abbr != "")
+            translate([66, 49, wall_top - 1]) linear_extrude(1 + 0.6) mirror([1, 0]) resin_mark();
         // engraved labels, read from the front
         engrave() {
             for (w = [[14.75, "DOOR A"], [35.75, "DOOR B"], [61.75, "RS485"]])
@@ -230,6 +240,22 @@ function name_y(i) = i >= len(name) - 1 ? 26 : name_y(i + 1) + name_size[i + 1] 
 
 module label_text(s, size) {
     text(s, size = size, font = "Liberation Sans:style=Bold", halign = "center", valign = "baseline");
+}
+
+// ASTM D7611 resin mark, 2D, centred: a triangle with the code in it, the abbreviation under it
+module resin_mark(s = 13, w = 0.9) {
+    h = s * sqrt(3) / 2;
+    tri = [[-s / 2, 0], [s / 2, 0], [0, h]];
+    translate([0, -(h - 4.2) / 2]) {
+        difference() {
+            offset(r = 0.5) offset(delta = -0.5) polygon(tri);
+            offset(delta = -w) polygon(tri);
+        }
+        translate([0, h / 3 + 0.15])
+            text(resin_code, size = 4.2, font = "Liberation Sans:style=Bold", halign = "center", valign = "center");
+        translate([0, -1.2])
+            text(resin_abbr, size = 3.0, font = "Liberation Sans:style=Bold", halign = "center", valign = "top");
+    }
 }
 
 module engrave(depth = 0.6) {

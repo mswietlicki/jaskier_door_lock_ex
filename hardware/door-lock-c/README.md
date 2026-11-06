@@ -397,8 +397,12 @@ the left wall. Two side screws hold the lid. Designed 6 November 2026, not print
 - **Print:** in PETG. PLA softens at about 55 °C, and a parked van gets hotter than that in summer.
   - Settings: 0.2 mm layers, 3 perimeters, 20 % infill, no supports.
   - Orientation: the base on its back, the lid on its top face (the engraved labels face the bed).
-  - PrusaSlicer's estimate (generic printer profile): base 32.6 g and 2 h 53 min, lid 15.8 g and
-    1 h 56 min.
+  - PrusaSlicer's estimate (generic printer profile): base 32.7 g and 2 h 53 min, lid 16.0 g and
+    1 h 58 min.
+  - PrusaSlicer warns of low bed adhesion on both parts and long bridges on the lid. Both come
+    from the text engraved in the faces on the bed: the letters' insides start as small islands,
+    and the next layers bridge the strokes. Without the engraving neither warning shows, so print
+    without supports anyway.
 - **Hardware per case:**
   - Board: 4 × M3 × 8 screws into the standoffs. They cut their own thread in the 2.7 mm holes.
     For M3 heat-set inserts, set `pcb_screw_hole = 4.0`.
@@ -444,6 +448,11 @@ the left wall. Two side screws hold the lid. Designed 6 November 2026, not print
     same size would be wider than the lid).
   - `label`, a smaller line under the name, per box: for example `-D 'label="BACK DOOR"'`. Empty by
     default.
+- **Resin mark:** the ASTM D7611 triangle with 7 and "PETG" under it, engraved on the back of the
+  base and inside the lid. Both read the right way round with the part turned over sideways.
+  PETG takes code 7 ("other"), not PET's 1: it melts lower than PET and spoils PET recycling.
+  For another filament, set `resin_code` and `resin_abbr` (`resin_abbr = ""` leaves the mark
+  off).
 - **Not covered:**
   - J7, the extension header, has no opening: drill one where its cable needs it.
   - The USB-C port: take the lid off.
