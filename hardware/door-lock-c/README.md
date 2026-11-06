@@ -380,8 +380,9 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
 
 ![Case, closed](docs/case-closed.png)
 
-The Door Lock Jaskier: a 3D-printed wall box for the board, 85 × 69 × 29 mm, in two parts. It
-hangs with the terminals at the bottom.
+The Door Lock Jaskier: a 3D-printed wall box for the board, 85 × 69 × 29 mm, in two parts, and
+110 mm wide with its four screw ears. It goes up assembled and closed, and hangs with the terminals
+at the bottom.
 The door A, door B and RS485 wires come in through windows in the bottom wall, and power through
 the left wall. Two side screws hold the lid. Designed 6 November 2026, not printed yet.
 
@@ -396,24 +397,27 @@ the left wall. Two side screws hold the lid. Designed 6 November 2026, not print
 - **Print:** in PETG. PLA softens at about 55 °C, and a parked van gets hotter than that in summer.
   - Settings: 0.2 mm layers, 3 perimeters, 20 % infill, no supports.
   - Orientation: the base on its back, the lid on its top face (the engraved labels face the bed).
-  - PrusaSlicer's estimate (generic printer profile): base 31.6 g and 2 h 33 min, lid 16.5 g and
-    1 h 50 min.
+  - PrusaSlicer's estimate (generic printer profile): base 32.6 g and 2 h 53 min, lid 15.8 g and
+    1 h 56 min.
 - **Hardware per case:**
   - Board: 4 × M3 × 8 screws into the standoffs. They cut their own thread in the 2.7 mm holes.
     For M3 heat-set inserts, set `pcb_screw_hole = 4.0`.
   - Lid: 2 × M3 × 8 screws, one through each side wall into the lid's blocks (2.6 mm pilot holes).
-  - Wall: 2 to 4 countersunk screws, 3.5–4 mm, heads up to 8.4 mm. Two diagonal holes are enough.
-- **Mounting:**
-  1. Screw the empty base to the wall, windows down. The wall holes are under the board.
-  2. Screw the board in.
-  3. Wire it with the lid off:
-     - Push each stripped wire through its window into its terminal, then tighten the terminal
-       from the top.
-     - The case has no strain relief, so tie the cables to the wall just below the box.
-  4. Flash the SuperMini and plug it in. Its USB-C faces into the board and can't be reached with
-     the lid on.
-  5. Fit the TERM cap if the board ends the bus.
-  6. Fit the lid and its 2 side screws.
+  - Wall: 2 to 4 countersunk screws, 3.5–4 mm, heads up to 8.4 mm, through the ears. Two diagonal
+    ears are enough.
+- **Ears:** two on each side wall, flat on the wall, 4 mm thick with a fillet where they meet the
+  wall. Each hole is 6.5 mm from the wall, which leaves room for a screwdriver or a bit holder.
+  They stay clear of the lid screws, so the lid comes off with the case on the wall. `ear_y` moves
+  them, and `wall_screws` brings back the floor holes under the board for mounting an empty base.
+- **Assembly and mounting:**
+  1. Screw the board in, flash the SuperMini and plug it in. Its USB-C faces into the board and
+     can't be reached with the lid on.
+  2. Fit the TERM cap if the board ends the bus.
+  3. Wire it with the lid off, on the bench or on the wall: push each stripped wire through its
+     window into its terminal, then tighten the terminal from the top.
+  4. Fit the lid and its 2 side screws.
+  5. Screw the case to the wall by its ears, windows down. The case has no strain relief, so tie
+     the cables to the wall just below the box.
 - **Fit:**
   - `python case/case_fit.py` exports the board from KiCad and the case from OpenSCAD, then
     measures the clearances. It needs trimesh, rtree and manifold3d.

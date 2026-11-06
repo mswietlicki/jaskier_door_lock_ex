@@ -41,8 +41,16 @@ lip_h = 2.0;
 pcb_screw_hole = 2.7;   // M3 x 8 machine screws cut their own thread; 4.0 for M3 heat-set inserts
 standoff_d = 7.0;
 wall_screw_d = 4.3;     // 3.5-4 mm countersunk screws
-wall_screw_head = 8.4;  // 90 degree countersink, flush with the floor
-wall_screws = [[20, 20], [60, 20], [20, 44], [60, 44]];
+wall_screw_head = 8.4;  // 90 degree countersink, flush with the ear or floor
+// ears on the side walls, flat on the wall: the case goes up assembled and closed
+ear_y = [6, 58];        // hole heights, the same on both sides: 4 ears, two diagonal ones are enough
+ear_t = 4.0;
+ear_r = 6.0;            // half the ear width, and its rounding around the hole
+ear_hole_off = 6.5;     // hole centre to the side wall, room for a screwdriver or bit holder
+ear_fillet = 1.5;       // where the ear meets the wall
+// optional floor holes under the board, for screwing the empty base to the wall first:
+// [[20, 20], [60, 20], [20, 44], [60, 44]]
+wall_screws = [];
 lid_screw_clear = 3.4;  // through the side walls
 lid_screw_pilot = 2.6;  // M3 x 8 into the lid blocks
 lid_screw_y = 26;
@@ -122,6 +130,13 @@ module base() {
             }
             for (h = holes) translate([h[0], h[1], floor_t - e])
                 cylinder(d = standoff_d, h = standoff_h + e);
+            ears();
+        }
+        // ear screws, countersunk from the front
+        for (p = ear_holes()) translate([p[0], p[1], 0]) {
+            translate([0, 0, -1]) cylinder(d = wall_screw_d, h = ear_t + 2);
+            translate([0, 0, ear_t - cs]) cylinder(d1 = wall_screw_d, d2 = wall_screw_head, h = cs + e);
+            translate([0, 0, ear_t]) cylinder(d = wall_screw_head, h = ear_fillet + 1);
         }
         // board screws: blind, 1 mm short of the back face
         for (h = holes) translate([h[0], h[1], 1.0])
@@ -145,6 +160,25 @@ module base() {
         for (x = [out0[0] + wall / 2, in1[0] + wall / 2])
             translate([x, lid_screw_y, top_z + lid_screw_dz])
                 hole_x(lid_screw_clear, wall + 2);
+    }
+}
+
+// side wall outer face, outward direction and hole centre of each ear
+function ear_sides() = [[out0[0], -1], [out1[0], 1]];
+function ear_holes() = [for (s = ear_sides(), y = ear_y) [s[0] + s[1] * ear_hole_off, y]];
+
+module ears() {
+    for (s = ear_sides(), y = ear_y) {
+        xw = s[0];
+        d = s[1];
+        // flat ear: the rounded end around the hole, its root 1 mm into the wall
+        linear_extrude(ear_t) hull() {
+            translate([xw + d * ear_hole_off, y]) circle(r = ear_r);
+            translate([d < 0 ? xw : xw - 1, y - ear_r]) square([1, 2 * ear_r]);
+        }
+        // 45 degree fillet along the wall, on top of the ear
+        translate([0, y + ear_r, 0]) rotate([90, 0, 0]) linear_extrude(2 * ear_r)
+            polygon([[xw - d, ear_t - e], [xw + d * ear_fillet, ear_t - e], [xw - d, ear_t + ear_fillet + 1]]);
     }
 }
 
