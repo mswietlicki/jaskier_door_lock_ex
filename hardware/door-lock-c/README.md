@@ -332,6 +332,12 @@ CAN-B node and the RS485 tee (jaskier repo, `hardware/rs485-tee`).
 
 ## Assembly
 
+Solder it with [`docs/soldering-guide.md`](docs/soldering-guide.md) (printable:
+[`soldering-guide.pdf`](docs/soldering-guide.pdf)): the parts by their LCSC order names, a
+labelled board drawing, the schematic with the diode directions, how to find pin 1 on each
+chip, the soldering order as checklists and the checks before power. The summary below is the
+short form.
+
 Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) with
 `jlcpcb/bom.csv` (values per reference) and `docs/board-top.png`. All parts sit on the top side.
 
@@ -351,7 +357,8 @@ Use `docs/assembly-top.pdf` (part outlines, references, pad numbers; zoom in) wi
      footprint.
    - C1: + on the marked pad.
    - LED2: the cut corner is pin 3 (GND), bottom right.
-   - Q1, D3 and U1–U5: pin 1 at the dot.
+   - Q1 and D3 fit one way only. U1–U5: pin 1 at the printed triangle; several of these chips
+     have no pin-1 dot, and the soldering guide says how to find pin 1 on each.
 4. **Through-hole.**
    - J5/J6: solder them with the SuperMini plugged in, so they stay parallel.
    - J7 and JP1.
@@ -486,13 +493,14 @@ python case/case_fit.py
 |---|---|
 | `door-lock-c.kicad_pro`, `.kicad_sch`, `.kicad_pcb` | KiCad 10 project (standard KiCad libraries only) |
 | `jlcpcb/` | Gerbers and drills (zip), BOM, combined LCSC order with the CAN-B node |
-| `docs/` | Schematic PDF and PNG, assembly drawing, board renders |
+| `docs/` | Schematic PDF and PNG, assembly drawing, board renders, the soldering guide (Markdown and PDF) and its drawings |
 | `tools/parts.py` | Parts, nets, LCSC numbers: the schematic's source |
 | `tools/layout.py` | Placement, routing jobs, silkscreen |
 | `tools/gen_sch.py` | Writes the schematic and project (any Python 3) |
 | `tools/gen_pcb.py`, `tools/router.py` | Build and route the board (KiCad's `python.exe`): placement from `layout.py`, then a two-layer A* grid router (0.1 mm grid, clearance-aware, bends and vias cost extra), GND vias, stitching, pours |
 | `tools/jlcpcb.py` | Gerbers, drills, BOM, assembly drawing; `--cpl` for a JLCPCB placement file (KiCad's `python.exe`) |
 | `tools/lcsc_order.py` | One LCSC order for door-lock-c boards, CAN-B nodes and RS485 tees (any Python 3) |
+| `tools/soldering.py` | Settings for the soldering guide; build it with `python ../jaskier/tools/soldering_guide.py hardware/door-lock-c` from the repo root (the generator and the standard, `hardware/SOLDERING.md`, are in the jaskier repo) |
 | `case/` | 3D-printed wall case: OpenSCAD source, STLs, fit check (see [Case](#case)) |
 
 Regenerate everything from the project directory:
