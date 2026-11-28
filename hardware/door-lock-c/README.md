@@ -234,7 +234,17 @@ globals that those packages write (`_at_locked`, `_at_unlocked`, `_lock_inhibit`
   - green flash: a move finished
 - **Extra entities:** supply voltage (door A's INA219), Wi-Fi signal, uptime.
 - **Checked:** `esphome config` passes for variants A, B and C on ESPHome 2026.10.2, and variant C
-  compiles. Not yet run on hardware.
+  compiles. Not yet run on a board.
+- **First SuperMini flashed 28 November 2026** (MAC 30:ED:A0:5B:B1:38), bare, away from the van.
+  HA's Device Builder (ESPHome 2026.11.1) compiles it as `esphome/door-lock-c.yaml` in the HA
+  config repo: a copy of this file with the packages in `esphome/door-lock-c/` and its own API key,
+  `door_lock_c_api_encryption_key` in HA's `esphome/secrets.yaml` (generated on HA). The factory
+  image went on over USB with esptool (`erase-flash`, `write-flash 0x0`, then
+  `--after watchdog-reset read-mac` to boot it: the default RTS reset leaves a C3 in the ROM
+  loader on Windows). It boots, retries the Jaskier Wi-Fi and opens its `jaskier-door-lock-c-setup`
+  hotspot after a minute. With no board both INA219s are marked FAILED, as expected. HA has no
+  device for it until it joins the Jaskier Wi-Fi; later updates go over the air from the Device
+  Builder. Change the firmware here, then copy it to the HA repo.
 
 ## Design notes
 
